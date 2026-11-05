@@ -1,11 +1,11 @@
 {
-  "name": "smart-library-opac-portal",
-  "version": "2.0.0",
+  "name": "district-library-admin-portal",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "prisma generate && (next build || next build)",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "eslint",
     "db:push": "prisma db push",
     "seed": "tsx src/lib/seed.ts",

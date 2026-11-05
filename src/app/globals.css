@@ -1,13 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,400;1,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Rozha+One&family=Yatra+One&display=swap');
 @import "tailwindcss";
 
 @layer base {
-  :root,
-  [data-theme="opac"] {
+  :root {
     --primary: #0F766E; /* Teal 700 */
     --primary-hover: #115E59; /* Teal 800 */
-    --primary-light: #CCFBF1; /* Teal 100 */
-    --accent: #E11D48; /* Rose 600 */
-    --accent-light: #FFE4E6; /* Rose 100 */
+    --primary-light: #F0FDFA; /* Teal 50 */
+    --accent: #0284C7; /* Sky 600 */
+    --accent-light: #F0F9FF; /* Sky 50 */
     --bg-main: #F8FAFC; /* Slate 50 */
     --surface: #FFFFFF;
     --text-heading: #0F172A; /* Slate 900 */
@@ -17,172 +17,34 @@
 
     /* Tailwind v4 theme color mapping */
     --color-teal-50: #f0fdfa;
-    --color-teal-100: #cbfbf1;
+    --color-teal-100: #ccfbf1;
+    --color-teal-200: #99f6e4;
+    --color-teal-300: #5eead4;
     --color-teal-400: #2dd4bf;
     --color-teal-500: #14b8a6;
     --color-teal-600: #0d9488;
     --color-teal-700: #0f766e;
     --color-teal-800: #115e59;
     --color-teal-900: #134e4a;
+    --color-teal-950: #042f2e;
+
+    --color-rose-50: #fff1f2;
     --color-rose-100: #ffe4e6;
     --color-rose-600: #e11d48;
     --color-rose-700: #be123c;
     --color-rose-800: #9f1239;
+
     --color-slate-50: #f8fafc;
     --color-slate-100: #f1f5f9;
     --color-slate-200: #e2e8f0;
+    --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8;
+    --color-slate-500: #64748b;
+    --color-slate-600: #475569;
+    --color-slate-700: #334155;
     --color-slate-800: #1e293b;
     --color-slate-900: #0f172a;
     --color-white: #ffffff;
-  }
-
-  /* 2. HomeNest Design System (homenest-DESIGN.md) */
-  [data-theme="homenest"] {
-    --primary: #92400E; /* Warm Brown */
-    --primary-hover: #78350F;
-    --primary-light: #FEF3C7; /* Cream */
-    --accent: #84CC16; /* Sage Green */
-    --accent-light: #ECFCCB;
-    --bg-main: #FEF3C7;
-    --surface: #FFFBEB;
-    --text-heading: #1C1917;
-    --text-body: #44403C;
-    --text-muted: #78716C;
-    --border-color: #E7E5E4;
-
-    /* Tailwind overrides */
-    --color-teal-50: #FFFBEB;
-    --color-teal-100: #FEF3C7;
-    --color-teal-400: #84CC16;
-    --color-teal-500: #A16207;
-    --color-teal-600: #B45309;
-    --color-teal-700: #92400E;
-    --color-teal-800: #78350F;
-    --color-teal-900: #451A03;
-    --color-rose-100: #ECFCCB;
-    --color-rose-600: #65A30D;
-    --color-rose-700: #4D7C0F;
-    --color-rose-800: #3F6212;
-    --color-slate-50: #FEF3C7;
-    --color-slate-100: #FDE68A;
-    --color-slate-200: #E7E5E4;
-    --color-slate-800: #292524;
-    --color-slate-900: #1C1917;
-    --color-white: #FFFBEB;
-  }
-
-  /* 3. BrushStroke Design System (brushstroke-design-system-DESIGN.md) */
-  [data-theme="brushstroke"] {
-    --primary: #B45309; /* Burnt Sienna */
-    --primary-hover: #92400E;
-    --primary-light: #FDF4E0;
-    --accent: #65A30D; /* Olive */
-    --accent-light: #F3E8FF; /* Plum light */
-    --bg-main: #FFFDF7; /* Warm Paper */
-    --surface: #FEF9EF;
-    --text-heading: #292524;
-    --text-body: #44403C;
-    --text-muted: #78716C;
-    --border-color: #E7E5E4;
-
-    /* Tailwind overrides */
-    --color-teal-50: #FEF9EF;
-    --color-teal-100: #FDF4E0;
-    --color-teal-400: #65A30D;
-    --color-teal-500: #F59E0B;
-    --color-teal-600: #D97706;
-    --color-teal-700: #B45309;
-    --color-teal-800: #92400E;
-    --color-teal-900: #78350F;
-    --color-rose-100: #F3E8FF;
-    --color-rose-600: #7E22CE;
-    --color-rose-700: #6B21A8;
-    --color-rose-800: #581C87;
-    --color-slate-50: #FFFDF7;
-    --color-slate-100: #FBF4E6;
-    --color-slate-200: #E7E5E4;
-    --color-slate-800: #292524;
-    --color-slate-900: #1C1917;
-    --color-white: #FEF9EF;
-  }
-
-  /* 4. Corky's Cigar Co. Luxe (corky-s-cigar-co-designmd-ai-design-system-DESIGN.md) */
-  [data-theme="corky"] {
-    --primary: #112A15; /* Heritage Deep Green */
-    --primary-hover: #1D3B24;
-    --primary-light: #E2ECE4;
-    --accent: #C9A227; /* Antique Gold */
-    --accent-light: #FDF6DE;
-    --bg-main: #F6F1E7; /* Warm Cream */
-    --surface: #FFFDF8; /* Ivory */
-    --text-heading: #112A15;
-    --text-body: #1C1C1C;
-    --text-muted: #5A2E17;
-    --border-color: #D8CFBF;
-
-    /* Tailwind overrides */
-    --color-teal-50: #F2F7F3;
-    --color-teal-100: #E2ECE4;
-    --color-teal-400: #C9A227;
-    --color-teal-500: #2B5335;
-    --color-teal-600: #1D3B24;
-    --color-teal-700: #112A15;
-    --color-teal-800: #0C1D0F;
-    --color-teal-900: #071209;
-    --color-rose-100: #FDF6DE;
-    --color-rose-600: #C9A227;
-    --color-rose-700: #A56A2A;
-    --color-rose-800: #7A4B1A;
-    --color-slate-50: #F6F1E7;
-    --color-slate-100: #EFE8D9;
-    --color-slate-200: #D8CFBF;
-    --color-slate-800: #1C1C1C;
-    --color-slate-900: #112A15;
-    --color-white: #FFFDF8;
-  }
-
-  /* 5. Lumina Flow OS (lumina-DESIGN.md) */
-  [data-theme="lumina"] {
-    --primary: #EA580C; /* Vivid Neon Orange */
-    --primary-hover: #C2410C;
-    --primary-light: #381A0B;
-    --accent: #D04D09;
-    --accent-light: #3F1B09;
-    --bg-main: #09090B; /* Obsidian Dark */
-    --surface: #18181B; /* Dark Zinc */
-    --text-heading: #FFFFFF;
-    --text-body: #E4E4E7;
-    --text-muted: #A1A1AA;
-    --border-color: #27272A;
-
-    /* Tailwind overrides for Dark Neoform */
-    --color-teal-50: #271307;
-    --color-teal-100: #381A0B;
-    --color-teal-400: #FB923C;
-    --color-teal-500: #F97316;
-    --color-teal-600: #EA580C;
-    --color-teal-700: #EA580C;
-    --color-teal-800: #C2410C;
-    --color-teal-900: #9A3412;
-    --color-rose-100: #3F1B09;
-    --color-rose-600: #F97316;
-    --color-rose-700: #EA580C;
-    --color-rose-800: #C2410C;
-    --color-slate-50: #09090B;
-    --color-slate-100: #18181B;
-    --color-slate-200: #27272A;
-    --color-slate-300: #3F3F46;
-    --color-slate-400: #71717A;
-    --color-slate-500: #A1A1AA;
-    --color-slate-600: #D4D4D8;
-    --color-slate-700: #E4E4E7;
-    --color-slate-800: #F4F4F5;
-    --color-slate-900: #FFFFFF;
-    --color-white: #18181B;
-  }
-
-  html {
-    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   body {
@@ -192,21 +54,35 @@
   }
 }
 
-/* Custom Utilities for Editorial Discovery */
+/* Subtle, clean card shadows */
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+
+.card-shadow-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-shadow-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Clean book card shadow */
 .book-shadow {
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.06), 0 10px 15px -3px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .book-shadow-hover {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .book-shadow-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
 }
 
-/* Scrollbar Styling for Carousels */
+/* Scrollbar Utility */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
