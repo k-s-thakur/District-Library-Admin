@@ -1,54 +1,57 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { comparePassword, createSessionToken, SessionUser, UserRole } from "@/lib/auth";
+import { createSessionToken, SessionUser, UserRole } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { identifier, password, role } = body;
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body is acceptable in passwordless mode
+    }
 
+    const { identifier, role } = body || {};
     let user: SessionUser | null = null;
 
-    // 1. Quick demo switch mode (for instant tester convenience)
+    // 1. Quick demo / passwordless role selection
     if (role && !identifier) {
       if (role === "MEMBER") {
         const member = await prisma.member.findFirst({ where: { status: "ACTIVE" } });
-        if (!member) return NextResponse.json({ error: "No active member found" }, { status: 404 });
-        user = {
-          id: member.id,
-          email: member.email,
-          name: member.fullName,
-          role: "MEMBER",
-          memberId: member.id,
-          memberNo: member.memberNo,
-          category: member.category,
-        };
+        if (member) {
+          user = {
+            id: member.id,
+            email: member.email,
+            name: member.fullName,
+            role: "MEMBER",
+            memberId: member.id,
+            memberNo: member.memberNo,
+            category: member.category,
+          };
+        }
       } else {
         const staff = await prisma.staffUser.findFirst({ where: { role } });
-        if (!staff) return NextResponse.json({ error: `Staff role ${role} not found` }, { status: 404 });
-        user = {
-          id: staff.id,
-          email: staff.email,
-          name: staff.name,
-          role: staff.role as UserRole,
-        };
+        if (staff) {
+          user = {
+            id: staff.id,
+            email: staff.email,
+            name: staff.name,
+            role: staff.role as UserRole,
+          };
+        }
       }
-    } else {
-      // 2. Real credential check
-      if (!identifier || !password) {
-        return NextResponse.json({ error: "Identifier (Email or Member No) and Password are required." }, { status: 400 });
-      }
+    }
 
-      // Check staff first
+    // 2. Direct identifier lookup without password check
+    if (!user && identifier) {
+      const cleanId = String(identifier).trim().toLowerCase();
+
+      // Check staff by email
       const staff = await prisma.staffUser.findFirst({
-        where: { email: identifier.trim().toLowerCase() },
+        where: { email: cleanId },
       });
 
       if (staff) {
-        const matches = await comparePassword(password, staff.passwordHash);
-        if (!matches) {
-          return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
-        }
         user = {
           id: staff.id,
           email: staff.email,
@@ -56,42 +59,52 @@ export async function POST(req: NextRequest) {
           role: staff.role as UserRole,
         };
       } else {
-        // Check member
+        // Check member by email or memberNo
         const member = await prisma.member.findFirst({
           where: {
             OR: [
-              { email: identifier.trim().toLowerCase() },
-              { memberNo: identifier.trim() },
+              { email: cleanId },
+              { memberNo: cleanId.toUpperCase() },
             ],
           },
         });
 
-        if (!member) {
-          return NextResponse.json({ error: "Account not found with this identifier." }, { status: 401 });
+        if (member) {
+          user = {
+            id: member.id,
+            email: member.email,
+            name: member.fullName,
+            role: "MEMBER",
+            memberId: member.id,
+            memberNo: member.memberNo,
+            category: member.category,
+          };
         }
-
-        const validPassword = member.passwordHash
-          ? await comparePassword(password, member.passwordHash)
-          : password === "Member@123";
-
-        if (!validPassword) {
-          return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
-        }
-
-        user = {
-          id: member.id,
-          email: member.email,
-          name: member.fullName,
-          role: "MEMBER",
-          memberId: member.id,
-          memberNo: member.memberNo,
-          category: member.category,
-        };
       }
     }
 
+    // 3. Fallback: Default to Super Admin / Chief Librarian if no specific match
     if (!user) {
-      return NextResponse.json({ error: "Authentication failed." }, { status: 401 });
+      const defaultStaff = await prisma.staffUser.findFirst({
+        where: { role: "SUPER_ADMIN" },
+      }) || await prisma.staffUser.findFirst();
+
+      if (defaultStaff) {
+        user = {
+          id: defaultStaff.id,
+          email: defaultStaff.email,
+          name: defaultStaff.name,
+          role: defaultStaff.role as UserRole,
+        };
+      } else {
+        // Fallback dummy user if DB is totally empty
+        user = {
+          id: "admin-default",
+          email: "admin@library.gov.in",
+          name: "Chief Librarian (Admin)",
+          role: "SUPER_ADMIN",
+        };
+      }
     }
 
     const token = await createSessionToken(user);

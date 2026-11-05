@@ -18,6 +18,7 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  HelpCircle,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
 
@@ -139,7 +140,7 @@ export default function StaffCataloguePage() {
   const [activeActionDropdown, setActiveActionDropdown] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // New Book Form State (Comprehensive with all old DDC & accession fields)
+  // New Book Form State
   const [newTitle, setNewTitle] = useState("");
   const [newSubtitle, setNewSubtitle] = useState("");
   const [newAuthor, setNewAuthor] = useState("");
@@ -244,73 +245,95 @@ export default function StaffCataloguePage() {
   return (
     <div className="space-y-6">
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-teal-800 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center gap-2 border border-teal-500 animate-slide-up">
-          <CheckCircle2 className="w-4 h-4 text-teal-300" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#0d7a55] text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs flex items-center gap-2 border border-emerald-400">
+          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* 1. Header Section (Matching Photo 3 with Slate & Teal Theme) */}
+      {/* 1. Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <p className="text-[10px] tracking-widest uppercase font-semibold text-teal-700">
-            Collection Management
-          </p>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 mt-0.5">
-            Catalogue
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Search titles, track individual copies and manage your collection.
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center shrink-0 shadow-xs">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Catalogue & Stacks
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Holdings, titles, Dewey Decimal Classification and accession tags.
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons Top Right */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setImportExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Import / export</span>
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>Import / Export</span>
           </button>
 
           <button
             onClick={() => setAddBookModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0d7a55] hover:bg-[#0a6344] text-white text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Add book</span>
+            <Plus className="w-4 h-4" />
+            <span>Add Book</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Top 4 Metric KPI Cards (Matching Photo 3) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-slate-900">8,426</div>
-          <div className="text-xs text-slate-500 mt-1">Total titles</div>
+      {/* 2. Top 4 Metric KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#e6f7f0] text-[#0d7a55] flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">8,426</div>
+            <div className="text-xs text-slate-500 mt-0.5">Total Titles</div>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-slate-900">12,680</div>
-          <div className="text-xs text-slate-500 mt-1">Physical copies</div>
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#e8f2fe] text-[#2563eb] flex items-center justify-center shrink-0">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">12,680</div>
+            <div className="text-xs text-slate-500 mt-0.5">Physical Copies</div>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-teal-700">7,354</div>
-          <div className="text-xs text-slate-500 mt-1">Available now</div>
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#e6f7f0] text-[#0d7a55] flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-[#0d7a55] tabular-nums leading-tight">7,354</div>
+            <div className="text-xs text-slate-500 mt-0.5">Available on Shelves</div>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-blue-700">24</div>
-          <div className="text-xs text-slate-500 mt-1">Recently added</div>
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#f0edfb] text-[#7c3aed] flex items-center justify-center shrink-0">
+            <Plus className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">24</div>
+            <div className="text-xs text-slate-500 mt-0.5">Recently Added</div>
+          </div>
         </div>
       </div>
 
-      {/* 3. Search and Filters Bar (Matching Photo 3) */}
+      {/* 3. Search and Filters Bar */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -319,33 +342,33 @@ export default function StaffCataloguePage() {
               setCurrentPage(1);
             }}
             placeholder="Search title, author, accession no..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-50/70 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-teal-600 focus:bg-white transition"
+            className="w-full pl-10 pr-3.5 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-[#0d7a55] focus:bg-white transition"
           />
         </div>
 
-        {/* Filters Button & Popover */}
+        {/* Filters Popover */}
         <div className="relative w-full sm:w-auto" ref={filterRef}>
           <button
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium transition"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
             <span>Filters</span>
             {(categoryFilter !== "All" || statusFilter !== "All") && (
-              <span className="w-2 h-2 rounded-full bg-teal-600" />
+              <span className="w-2 h-2 rounded-full bg-[#0d7a55]" />
             )}
           </button>
 
           {filtersOpen && (
             <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 z-40 text-xs space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <span className="font-semibold text-slate-800">Filter Catalogue</span>
+                <span className="font-bold text-slate-800">Filter Catalogue</span>
                 <button
                   onClick={() => {
                     setCategoryFilter("All");
                     setStatusFilter("All");
                   }}
-                  className="text-slate-400 hover:text-slate-700 text-[11px]"
+                  className="text-slate-400 hover:text-slate-700 text-[11px] cursor-pointer"
                 >
                   Reset
                 </button>
@@ -356,12 +379,12 @@ export default function StaffCataloguePage() {
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-teal-600"
+                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-[#0d7a55]"
                 >
                   <option value="All">All Categories</option>
+                  <option value="Fiction">Fiction</option>
                   <option value="History">History</option>
                   <option value="Biography">Biography</option>
-                  <option value="Fiction">Fiction</option>
                   <option value="Science">Science</option>
                   <option value="Philosophy">Philosophy</option>
                 </select>
@@ -372,18 +395,19 @@ export default function StaffCataloguePage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-teal-600"
+                  className="w-full px-2.5 py-1.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:outline-[#0d7a55]"
                 >
                   <option value="All">All Statuses</option>
                   <option value="Available">Available</option>
                   <option value="Issued">Issued</option>
                   <option value="On hold">On hold</option>
+                  <option value="Under repair">Under repair</option>
                 </select>
               </div>
 
               <button
                 onClick={() => setFiltersOpen(false)}
-                className="w-full py-2 rounded-xl bg-teal-700 text-white font-medium hover:bg-teal-800"
+                className="w-full py-2 rounded-xl bg-[#0d7a55] text-white font-medium hover:bg-[#0a6344] cursor-pointer"
               >
                 Apply Filters
               </button>
@@ -392,255 +416,235 @@ export default function StaffCataloguePage() {
         </div>
       </div>
 
-      {/* 4. Catalogue Table (Matching Photo 3) */}
+      {/* 4. Catalogue Table Card */}
       <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] tracking-widest uppercase font-bold text-[#0d7a55]">
+              STACKS REPOSITORY
+            </p>
+            <h3 className="text-lg font-bold text-slate-900 mt-0.5">
+              Accessioned Holdings
+            </h3>
+          </div>
+          <span className="text-xs font-mono bg-slate-100 text-slate-600 px-3 py-1 rounded-full self-start sm:self-auto">
+            Showing {paginatedItems.length} of {filteredItems.length} titles
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-5">Book Title</th>
-                <th className="py-3 px-5">Accession No.</th>
-                <th className="py-3 px-5">Category</th>
-                <th className="py-3 px-5">Shelf / DDC</th>
-                <th className="py-3 px-5">Status</th>
-                <th className="py-3 px-5 text-right">Actions</th>
+              <tr className="bg-[#f2f7f4] border-b border-slate-200/80 text-[11px] font-bold text-[#536b60] uppercase tracking-wider">
+                <th className="py-3 px-5">TITLE & AUTHOR</th>
+                <th className="py-3 px-5">ACCESSION NO.</th>
+                <th className="py-3 px-5">CATEGORY</th>
+                <th className="py-3 px-5">SHELF / DDC</th>
+                <th className="py-3 px-5">STATUS</th>
+                <th className="py-3 px-5 text-right">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedItems.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    No catalogue records found.
+              {paginatedItems.map((book) => (
+                <tr key={book.id} className="hover:bg-slate-50/80 transition group">
+                  <td className="py-3.5 px-5">
+                    <div className="font-semibold text-slate-900 leading-tight">
+                      {book.title}
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      by {book.author}
+                    </div>
+                  </td>
+
+                  <td className="py-3.5 px-5 font-mono text-slate-600 text-xs">
+                    {book.accessionNo}
+                  </td>
+
+                  <td className="py-3.5 px-5 text-slate-700">
+                    {book.category}
+                  </td>
+
+                  <td className="py-3.5 px-5 font-mono text-slate-600 text-xs">
+                    {book.shelfDdc}
+                  </td>
+
+                  <td className="py-3.5 px-5">
+                    {book.status === "Available" ? (
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#e2f6ee] text-[#0d7a55] border border-emerald-200">
+                        Available
+                      </span>
+                    ) : book.status === "Issued" ? (
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#e0f2fe] text-[#0369a1] border border-sky-200">
+                        Issued
+                      </span>
+                    ) : (
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#fef3c7] text-[#b45309] border border-amber-200">
+                        {book.status}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="py-3.5 px-5 text-right relative">
+                    <button
+                      onClick={() =>
+                        setActiveActionDropdown(
+                          activeActionDropdown === book.id ? null : book.id
+                        )
+                      }
+                      className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+
+                    {activeActionDropdown === book.id && (
+                      <div className="absolute right-5 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-left text-xs">
+                        <button
+                          onClick={() => {
+                            setSelectedSpineLabel(book);
+                            setActiveActionDropdown(null);
+                          }}
+                          className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                        >
+                          <Tag className="w-3.5 h-3.5 text-[#0d7a55]" />
+                          <span>Print Spine Label</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedQrLabel(book);
+                            setActiveActionDropdown(null);
+                          }}
+                          className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                        >
+                          <QrCode className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Print Barcode Label</span>
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
-              ) : (
-                paginatedItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition group">
-                    <td className="py-3.5 px-5">
-                      <div className="font-semibold text-slate-900 leading-tight">
-                        {item.title}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {item.author}
-                      </div>
-                    </td>
-
-                    <td className="py-3.5 px-5 font-mono text-slate-600 text-[11px]">
-                      {item.accessionNo}
-                    </td>
-
-                    <td className="py-3.5 px-5 text-slate-700">
-                      {item.category}
-                    </td>
-
-                    <td className="py-3.5 px-5 font-mono text-slate-600 text-[11px]">
-                      {item.shelfDdc}
-                    </td>
-
-                    <td className="py-3.5 px-5">
-                      {item.status === "Available" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-teal-50 text-teal-800 border border-teal-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-                          <span>Available</span>
-                        </span>
-                      ) : item.status === "Issued" ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-800 border border-blue-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                          <span>Issued</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                          <span>On hold</span>
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="py-3.5 px-5 text-right relative">
-                      <button
-                        onClick={() =>
-                          setActiveActionDropdown(
-                            activeActionDropdown === item.id ? null : item.id
-                          )
-                        }
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-
-                      {activeActionDropdown === item.id && (
-                        <div className="absolute right-5 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-left text-xs">
-                          <button
-                            onClick={() => {
-                              setSelectedSpineLabel(item);
-                              setActiveActionDropdown(null);
-                            }}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <Tag className="w-3.5 h-3.5 text-teal-600" />
-                            <span>Print Spine Label</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedQrLabel(item);
-                              setActiveActionDropdown(null);
-                            }}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <QrCode className="w-3.5 h-3.5 text-blue-600" />
-                            <span>View QR / Barcode Token</span>
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination Footer */}
-        <div className="py-3 px-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
-          <span className="text-[11px] text-slate-400">
-            Showing {paginatedItems.length} of 8,426 titles in this preview
-          </span>
-
-          <div className="flex items-center gap-2">
+        {/* Pagination Bar */}
+        <div className="py-3 px-5 bg-slate-50/70 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-600">
+          <span>Page {currentPage} of {totalPages}</span>
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-slate-700 transition"
+              className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer"
             >
-              Previous
+              <ChevronLeft className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium text-slate-700 transition"
+              className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-40 transition cursor-pointer"
             >
-              Next
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* COMPREHENSIVE ADD BOOK & ACCESSION MODAL (Retaining all previous PRD & inventory features) */}
+      {/* ADD BOOK MODAL */}
       {addBookModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold">
-                  <Plus className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-serif text-base font-bold text-slate-900">
-                    Add Book Title & Accession Stacks
-                  </h3>
-                  <p className="text-xs text-slate-500">Full metadata, DDC classification & copy inventory</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setAddBookModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700 p-1"
-              >
+              <span className="font-bold text-slate-900 text-sm">
+                Add New Book to Stacks
+              </span>
+              <button onClick={() => setAddBookModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleAddBook} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-medium mb-1">Book Title *</label>
+                <label className="block text-slate-700 font-medium mb-1">
+                  Book Title *
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. India's Struggle for Independence"
+                  placeholder="e.g. Discovery of India"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-medium mb-1">
+                  Primary Author *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Jawaharlal Nehru"
+                  value={newAuthor}
+                  onChange={(e) => setNewAuthor(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">Author / Editor *</label>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    ISBN Code
+                  </label>
                   <input
                     type="text"
-                    required
-                    placeholder="e.g. Bipan Chandra"
-                    value={newAuthor}
-                    onChange={(e) => setNewAuthor(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                    placeholder="978-0195623598"
+                    value={newIsbn}
+                    onChange={(e) => setNewIsbn(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">ISBN 13 Code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 978-0143423232"
-                    value={newIsbn}
-                    onChange={(e) => setNewIsbn(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
-                  />
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
+                  >
+                    <option>Fiction</option>
+                    <option>History</option>
+                    <option>Biography</option>
+                    <option>Science</option>
+                    <option>Philosophy</option>
+                  </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">Category</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600 bg-white"
-                  >
-                    <option>History</option>
-                    <option>Biography</option>
-                    <option>Fiction</option>
-                    <option>Science</option>
-                    <option>Philosophy</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-medium mb-1">DDC Code (Dewey Decimal)</label>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Dewey Decimal Class
+                  </label>
                   <input
                     type="text"
+                    placeholder="954"
                     value={newDdc}
                     onChange={(e) => setNewDdc(e.target.value)}
-                    placeholder="e.g. 954.03"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-medium mb-1">Shelf Location</label>
-                  <input
-                    type="text"
-                    value={newShelf}
-                    onChange={(e) => setNewShelf(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">Edition</label>
-                  <input
-                    type="text"
-                    value={newEdition}
-                    onChange={(e) => setNewEdition(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-medium mb-1">Copies Count</label>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Number of Copies
+                  </label>
                   <input
                     type="number"
-                    min={1}
-                    max={20}
+                    min="1"
                     value={newCopies}
                     onChange={(e) => setNewCopies(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
               </div>
@@ -649,16 +653,16 @@ export default function StaffCataloguePage() {
                 <button
                   type="button"
                   onClick={() => setAddBookModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-medium shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium cursor-pointer"
                 >
-                  {isSubmitting ? "Adding..." : "Add to Catalogue & Generate Copies"}
+                  {isSubmitting ? "Accessioning..." : "Accession to Catalogue"}
                 </button>
               </div>
             </form>
@@ -669,14 +673,14 @@ export default function StaffCataloguePage() {
       {/* IMPORT / EXPORT MODAL */}
       {importExportModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="font-serif font-bold text-slate-900 text-sm">
-                Import / Export Catalogue
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <span className="font-bold text-slate-900 text-sm">
+                Import & Export Catalogue
               </span>
               <button
                 onClick={() => setImportExportModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -688,115 +692,87 @@ export default function StaffCataloguePage() {
                   handleExportCSV();
                   setImportExportModalOpen(false);
                 }}
-                className="w-full p-3 rounded-xl border border-slate-200 hover:border-teal-600 hover:bg-teal-50/50 text-left transition flex items-center gap-3"
+                className="w-full p-3 rounded-xl border border-slate-200 hover:border-[#0d7a55] flex items-center gap-3 text-left transition cursor-pointer"
               >
-                <Download className="w-5 h-5 text-teal-700" />
+                <Download className="w-4 h-4 text-[#0d7a55]" />
                 <div>
-                  <p className="font-semibold text-slate-900">Export Complete Catalogue (CSV)</p>
-                  <p className="text-[11px] text-slate-500">Download formatted CSV with all accessions and DDC shelf codes.</p>
+                  <p className="font-semibold text-slate-900">Download CSV Export</p>
+                  <p className="text-[11px] text-slate-500">All titles with Dewey numbers</p>
                 </div>
               </button>
 
-              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-left space-y-2">
-                <div className="flex items-center gap-3">
-                  <Upload className="w-5 h-5 text-slate-500" />
-                  <div>
-                    <p className="font-semibold text-slate-900">Bulk Import Accessions</p>
-                    <p className="text-[11px] text-slate-500">Supports CSV, Excel or MARC21 standard exports.</p>
-                  </div>
-                </div>
-                <input
-                  type="file"
-                  accept=".csv,.json"
-                  onChange={() => {
-                    showToast("Uploaded file queued for batch validation.");
-                    setImportExportModalOpen(false);
-                  }}
-                  className="mt-2 block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-teal-700 file:text-white hover:file:bg-teal-800"
-                />
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setImportExportModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium hover:bg-slate-200"
+                onClick={() => {
+                  showToast("Batch MARC21 importer ready.");
+                  setImportExportModalOpen(false);
+                }}
+                className="w-full p-3 rounded-xl border border-slate-200 hover:border-blue-600 flex items-center gap-3 text-left transition cursor-pointer"
               >
-                Close
+                <Upload className="w-4 h-4 text-blue-600" />
+                <div>
+                  <p className="font-semibold text-slate-900">Import MARC21 / CSV</p>
+                  <p className="text-[11px] text-slate-500">Bulk accession intake</p>
+                </div>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* PRINT SPINE LABEL MODAL */}
+      {/* SPINE LABEL MODAL */}
       {selectedSpineLabel && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xs w-full p-5 space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xs w-full p-5 space-y-3 text-xs">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-500 uppercase">
-                Library Spine Label
-              </span>
-              <button onClick={() => setSelectedSpineLabel(null)}>
-                <X className="w-4 h-4 text-slate-400" />
+              <span className="font-bold text-slate-900">Spine Label Voucher</span>
+              <button onClick={() => setSelectedSpineLabel(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 p-4 rounded-xl bg-slate-50 text-center font-mono space-y-2">
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest">Janata Library</p>
+            <div className="p-3 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-center font-mono space-y-1">
+              <div className="text-[10px] text-slate-400 uppercase">District Library</div>
               <div className="text-sm font-bold text-slate-900">{selectedSpineLabel.shelfDdc}</div>
-              <div className="text-xs text-teal-800 font-bold">{selectedSpineLabel.accessionNo}</div>
-              <p className="text-[10px] text-slate-500 italic truncate">{selectedSpineLabel.title}</p>
+              <div className="text-xs text-slate-600">{selectedSpineLabel.accessionNo}</div>
+              <div className="text-[9px] text-slate-400">Copy #1 of {selectedSpineLabel.copiesCount}</div>
             </div>
 
             <button
-              onClick={() => {
-                window.print();
-                setSelectedSpineLabel(null);
-              }}
-              className="w-full py-2.5 bg-teal-700 text-white rounded-xl text-xs font-medium hover:bg-teal-800 flex items-center justify-center gap-2"
+              onClick={() => window.print()}
+              className="w-full py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-full font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Spine Label</span>
+              <span>Print Label</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* VIEW QR / BARCODE TOKEN MODAL */}
+      {/* QR BARCODE MODAL */}
       {selectedQrLabel && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xs w-full p-5 space-y-4 text-center">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xs w-full p-5 space-y-3 text-xs">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="text-xs font-semibold text-slate-500 uppercase">
-                Accession Token Label
-              </span>
-              <button onClick={() => setSelectedQrLabel(null)}>
-                <X className="w-4 h-4 text-slate-400" />
+              <span className="font-bold text-slate-900">Accession Barcode</span>
+              <button onClick={() => setSelectedQrLabel(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-              <div className="w-24 h-24 mx-auto bg-white p-2 border border-slate-200 rounded-lg flex items-center justify-center shadow-xs">
-                <QrCode className="w-20 h-20 text-slate-800" />
+            <div className="p-4 border border-slate-200 rounded-xl bg-white text-center space-y-2">
+              <div className="w-20 h-20 mx-auto bg-slate-900 text-white rounded-lg flex items-center justify-center font-mono text-[9px] p-2">
+                [QR CODE TOKEN]
               </div>
-              <div className="font-mono text-xs font-bold text-slate-900">
-                {selectedQrLabel.accessionNo}
-              </div>
-              <p className="text-[11px] text-slate-500 leading-tight">
-                {selectedQrLabel.title}
-              </p>
+              <div className="font-mono font-bold text-sm text-slate-900">{selectedQrLabel.accessionNo}</div>
+              <div className="text-[11px] text-slate-500 truncate">{selectedQrLabel.title}</div>
             </div>
 
             <button
-              onClick={() => {
-                window.print();
-                setSelectedQrLabel(null);
-              }}
-              className="w-full py-2.5 bg-teal-700 text-white rounded-xl text-xs font-medium hover:bg-teal-800 flex items-center justify-center gap-2"
+              onClick={() => window.print()}
+              className="w-full py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-full font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print QR Label</span>
+              <span>Print Barcode</span>
             </button>
           </div>
         </div>

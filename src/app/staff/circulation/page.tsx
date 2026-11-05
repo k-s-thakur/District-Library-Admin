@@ -1,26 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import {
   Repeat,
-  QrCode,
   Plus,
   Download,
-  Bell,
   CheckCircle2,
   AlertTriangle,
   RotateCcw,
   Clock,
   ArrowRight,
   X,
-  Search,
   Scan,
   User,
   BookOpen,
   Calendar,
-  Layers,
   ArrowLeftRight,
+  HelpCircle,
 } from "lucide-react";
 
 interface FollowUpItem {
@@ -231,128 +227,154 @@ export default function StaffCirculationPage() {
     <div className="space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-teal-800 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center gap-2 border border-teal-500 animate-slide-up">
-          <CheckCircle2 className="w-4 h-4 text-teal-300" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#0d7a55] text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs flex items-center gap-2 border border-emerald-400">
+          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* 1. Header Section (Matching Photo 4 with Slate & Teal Theme) */}
+      {/* 1. Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <p className="text-[10px] tracking-widest uppercase font-semibold text-teal-700">
-            Loans & Returns
-          </p>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 mt-0.5">
-            Circulation
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Manage issues, returns, renewals and reservation follow-ups.
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center shrink-0 shadow-xs">
+            <ArrowLeftRight className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              Circulation Desk
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Manage book issues, returns, renewals, and due date follow-ups.
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons Top Right */}
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setScanModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-xs transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <Scan className="w-3.5 h-3.5 text-slate-500" />
-            <span>Scan a book</span>
+            <Scan className="w-4 h-4 text-slate-500" />
+            <span>Scan Barcode</span>
           </button>
 
           <button
             onClick={() => setIssueModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0d7a55] hover:bg-[#0a6344] text-white text-xs font-semibold shadow-xs transition cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>+ Issue a book</span>
+            <Plus className="w-4 h-4" />
+            <span>Issue Book</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Top 4 Metric KPI Cards (Matching Photo 4) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-slate-900">1,084</div>
-          <div className="text-xs text-slate-500 mt-1">Books on loan</div>
+      {/* 2. Top 4 Metric KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Books on Loan */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#e6f7f0] text-[#0d7a55] flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">1,084</div>
+            <div className="text-xs text-slate-500 mt-0.5">Books on Loan</div>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-slate-900">92</div>
-          <div className="text-xs text-slate-500 mt-1">Due this week</div>
+        {/* Due This Week */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#e8f2fe] text-[#2563eb] flex items-center justify-center shrink-0">
+            <Calendar className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">92</div>
+            <div className="text-xs text-slate-500 mt-0.5">Due This Week</div>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-rose-600">12</div>
-          <div className="text-xs text-slate-500 mt-1">Overdue</div>
+        {/* Overdue Accounts */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#fdeeed] text-[#dc2626] flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-[#dc2626] tabular-nums leading-tight">12</div>
+            <div className="text-xs text-slate-500 mt-0.5">Overdue Accounts</div>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-          <div className="text-3xl font-serif font-bold text-slate-900">27</div>
-          <div className="text-xs text-slate-500 mt-1">Reservations waiting</div>
+        {/* Pending Reservations */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-[#f0edfb] text-[#7c3aed] flex items-center justify-center shrink-0">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">27</div>
+            <div className="text-xs text-slate-500 mt-0.5">Pending Reservations</div>
+          </div>
         </div>
       </div>
 
-      {/* Circulation Sub-Navigation Tabs (Integrating Old & New Features) */}
-      <div className="flex border-b border-slate-200 gap-1 overflow-x-auto text-xs font-medium">
+      {/* Circulation Sub-Navigation Tabs */}
+      <div className="flex border-b border-slate-200 gap-6 overflow-x-auto text-xs font-medium pt-1">
         <button
           onClick={() => setActiveTab("followups")}
-          className={`py-2 px-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+          className={`pb-2.5 font-medium transition whitespace-nowrap cursor-pointer ${
             activeTab === "followups"
-              ? "border-teal-600 text-teal-800 bg-teal-50/50 rounded-t-lg"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Due Dates & Follow-ups (Action Required)
+          Due Dates & Follow-ups
         </button>
         <button
           onClick={() => setActiveTab("issue")}
-          className={`py-2 px-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+          className={`pb-2.5 font-medium transition whitespace-nowrap cursor-pointer ${
             activeTab === "issue"
-              ? "border-teal-600 text-teal-800 bg-teal-50/50 rounded-t-lg"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Fast Issue Desk
+          Issue Desk
         </button>
         <button
           onClick={() => setActiveTab("return")}
-          className={`py-2 px-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+          className={`pb-2.5 font-medium transition whitespace-nowrap cursor-pointer ${
             activeTab === "return"
-              ? "border-teal-600 text-teal-800 bg-teal-50/50 rounded-t-lg"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Fast Return Desk
+          Return Desk
         </button>
         <button
           onClick={() => setActiveTab("active")}
-          className={`py-2 px-3.5 border-b-2 font-semibold transition whitespace-nowrap ${
+          className={`pb-2.5 font-medium transition whitespace-nowrap cursor-pointer ${
             activeTab === "active"
-              ? "border-teal-600 text-teal-800 bg-teal-50/50 rounded-t-lg"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Active Loans Directory ({activeLoans.length})
+          Active Loans ({activeLoans.length})
         </button>
       </div>
 
-      {/* TAB 1: Due Dates & Follow-ups (From Photo 4) */}
+      {/* TAB 1: Due Dates & Follow-ups (Exact match to image) */}
       {activeTab === "followups" && (
         <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
           <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] tracking-widest uppercase font-semibold text-rose-600">
-                Action Required
+              <p className="text-[10px] tracking-widest uppercase font-bold text-[#0d7a55]">
+                ACTION REQUIRED
               </p>
-              <h3 className="font-serif text-lg font-bold text-slate-900 mt-0.5">
+              <h3 className="text-lg font-bold text-slate-900 mt-0.5">
                 Due dates & follow-ups
               </h3>
             </div>
             <button
               onClick={handleExportRegister}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium self-start sm:self-auto transition"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold self-start sm:self-auto transition shadow-xs cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 text-slate-500" />
               <span>Export register</span>
@@ -362,45 +384,52 @@ export default function StaffCirculationPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-5">Member</th>
-                  <th className="py-3 px-5">Book</th>
-                  <th className="py-3 px-5">Due Date</th>
-                  <th className="py-3 px-5">Follow-up</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                <tr className="bg-[#f2f7f4] border-b border-slate-200/80 text-[11px] font-bold text-[#536b60] uppercase tracking-wider">
+                  <th className="py-3 px-5">MEMBER</th>
+                  <th className="py-3 px-5">BOOK</th>
+                  <th className="py-3 px-5">DUE DATE</th>
+                  <th className="py-3 px-5">FOLLOW-UP</th>
+                  <th className="py-3 px-5 text-right">ACTION</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {followUps.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition">
                     <td className="py-3.5 px-5">
-                      <div className="font-semibold text-slate-900 leading-tight">
-                        {item.member}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
-                        {item.memberSubtitle}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-900 leading-tight">
+                            {item.member}
+                          </div>
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {item.memberSubtitle}
+                          </div>
+                        </div>
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-5 font-medium text-slate-800">
+                    <td className="py-3.5 px-5 font-normal text-slate-800">
                       {item.book}
                     </td>
 
-                    <td className="py-3.5 px-5 font-mono text-slate-600 text-[11px]">
+                    <td className="py-3.5 px-5 text-slate-600 text-xs">
                       {item.dueDate}
                     </td>
 
                     <td className="py-3.5 px-5">
                       {item.followUp === "Due today" ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                        <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-[#fef3c7] text-[#b45309] border border-[#fde68a]">
                           Due today
                         </span>
                       ) : item.followUp === "Overdue 2 days" ? (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-800 border border-rose-200">
+                        <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-[#fee2e2] text-[#b91c1c] border border-[#fecaca]">
                           Overdue 2 days
                         </span>
                       ) : (
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-sky-50 text-sky-800 border border-sky-200">
+                        <span className="inline-block px-3 py-0.5 rounded-full text-xs font-medium bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd]">
                           Due tomorrow
                         </span>
                       )}
@@ -409,9 +438,9 @@ export default function StaffCirculationPage() {
                     <td className="py-3.5 px-5 text-right">
                       <button
                         onClick={() => handleRemind(item.id, item.member)}
-                        className={`px-3 py-1 rounded-lg text-xs font-medium border transition ${
+                        className={`px-4 py-1 rounded-full text-xs font-semibold border transition cursor-pointer shadow-xs ${
                           item.reminded
-                            ? "bg-teal-50 text-teal-800 border-teal-300"
+                            ? "bg-emerald-50 text-[#0d7a55] border-emerald-300"
                             : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                         }`}
                       >
@@ -424,17 +453,18 @@ export default function StaffCirculationPage() {
             </table>
           </div>
 
-          <div className="py-3 px-5 bg-slate-50 border-t border-slate-200 text-[11px] text-slate-500">
-            Reminder and issue records require staff access controls.
+          <div className="py-3 px-5 bg-slate-50/70 border-t border-slate-200/80 text-xs text-slate-500 flex items-center gap-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+            <span>Reminder and issue records require staff access controls.</span>
           </div>
         </div>
       )}
 
-      {/* TAB 2: Fast Issue Desk (Original Feature) */}
+      {/* TAB 2: Fast Issue Desk */}
       {activeTab === "issue" && (
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs max-w-2xl space-y-4">
           <div>
-            <h3 className="font-serif text-lg font-bold text-slate-900">Fast Book Checkout Desk</h3>
+            <h3 className="text-lg font-bold text-slate-900">Fast Book Checkout Desk</h3>
             <p className="text-xs text-slate-500">Scan or input citizen ID & copy barcode</p>
           </div>
 
@@ -446,10 +476,10 @@ export default function StaffCirculationPage() {
               <input
                 type="text"
                 required
-                placeholder="e.g. MBR-2023-0984 or 9871154321"
+                placeholder="e.g. MBR-2024-0185 or 9871154321"
                 value={issueMember}
                 onChange={(e) => setIssueMember(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-teal-600"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
               />
             </div>
 
@@ -463,11 +493,11 @@ export default function StaffCirculationPage() {
                 placeholder="e.g. ACC-2024-0043"
                 value={issueBookAcc}
                 onChange={(e) => setIssueBookAcc(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-teal-600"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
               />
             </div>
 
-            <div className="p-3.5 rounded-xl bg-teal-50/70 border border-teal-200 text-teal-900 space-y-1">
+            <div className="p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-[#0d7a55] space-y-1">
               <p className="font-semibold">Standard Circulation Policy Verified:</p>
               <p>• 14 calendar days checkout duration (Due date: 04 Nov 2026).</p>
               <p>• Grace period: 2 days. Subsequent overdue fine: ₹2 per day.</p>
@@ -477,7 +507,7 @@ export default function StaffCirculationPage() {
               <button
                 type="submit"
                 disabled={isSubmittingIssue}
-                className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-medium shadow-xs transition"
+                className="px-5 py-2.5 rounded-full bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs transition cursor-pointer"
               >
                 {isSubmittingIssue ? "Issuing..." : "Complete Checkout & Print Slip"}
               </button>
@@ -486,11 +516,11 @@ export default function StaffCirculationPage() {
         </div>
       )}
 
-      {/* TAB 3: Fast Return Desk (Original Feature) */}
+      {/* TAB 3: Fast Return Desk */}
       {activeTab === "return" && (
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs max-w-2xl space-y-4">
           <div>
-            <h3 className="font-serif text-lg font-bold text-slate-900">Book Return & Inward Check-in</h3>
+            <h3 className="text-lg font-bold text-slate-900">Book Return & Inward Check-in</h3>
             <p className="text-xs text-slate-500">Scan accession barcode or enter copy number</p>
           </div>
 
@@ -505,21 +535,21 @@ export default function StaffCirculationPage() {
                 placeholder="e.g. ACC-2024-0043"
                 value={returnAcc}
                 onChange={(e) => setReturnAcc(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-teal-600"
+                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
               />
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 space-y-1">
               <p className="font-semibold text-slate-800">Check-in Process:</p>
               <p>• Automatically checks overdue status and assesses fine if applicable.</p>
-              <p>• Automatically updates copy status back to "Available" in the stacks.</p>
+              <p>• Automatically updates copy status back to &quot;Available&quot; in the stacks.</p>
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isSubmittingReturn}
-                className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-medium shadow-xs transition"
+                className="px-5 py-2.5 rounded-full bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs transition cursor-pointer"
               >
                 {isSubmittingReturn ? "Checking in..." : "Check-in Book to Stacks"}
               </button>
@@ -528,12 +558,12 @@ export default function StaffCirculationPage() {
         </div>
       )}
 
-      {/* TAB 4: Active Loans Directory (Original Feature) */}
+      {/* TAB 4: Active Loans Directory */}
       {activeTab === "active" && (
         <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
           <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div>
-              <h3 className="font-serif text-lg font-bold text-slate-900">
+              <h3 className="text-lg font-bold text-slate-900">
                 All Active Loans Across Library
               </h3>
               <p className="text-xs text-slate-500">Live circulation records</p>
@@ -543,7 +573,7 @@ export default function StaffCirculationPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <tr className="bg-[#f2f7f4] border-b border-slate-200/80 text-[11px] font-bold text-[#536b60] uppercase tracking-wider">
                   <th className="py-3 px-5">Member</th>
                   <th className="py-3 px-5">Book Title</th>
                   <th className="py-3 px-5">Accession</th>
@@ -560,10 +590,10 @@ export default function StaffCirculationPage() {
                       <div className="font-semibold text-slate-900">{loan.memberName}</div>
                       <div className="text-[11px] text-slate-400 font-mono">{loan.memberNo}</div>
                     </td>
-                    <td className="py-3.5 px-5 font-medium text-slate-800">{loan.bookTitle}</td>
+                    <td className="py-3.5 px-5 font-normal text-slate-800">{loan.bookTitle}</td>
                     <td className="py-3.5 px-5 font-mono text-slate-600">{loan.accessionNo}</td>
                     <td className="py-3.5 px-5 text-slate-600">{loan.issuedAt}</td>
-                    <td className="py-3.5 px-5 font-mono font-medium">
+                    <td className="py-3.5 px-5 font-medium">
                       <span className={loan.status === "OVERDUE" ? "text-rose-600" : "text-slate-800"}>
                         {loan.dueDate}
                       </span>
@@ -573,7 +603,7 @@ export default function StaffCirculationPage() {
                       <button
                         onClick={() => handleRenewLoan(loan.id)}
                         disabled={loan.renewals >= 2}
-                        className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium disabled:opacity-40"
+                        className="px-3.5 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold disabled:opacity-40 shadow-xs cursor-pointer"
                       >
                         Renew
                       </button>
@@ -586,7 +616,7 @@ export default function StaffCirculationPage() {
         </div>
       )}
 
-      {/* 4. Bottom Quick Action Cards (Matching Photo 4) */}
+      {/* 4. Bottom Quick Action Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: Process a return */}
         <button
@@ -594,10 +624,10 @@ export default function StaffCirculationPage() {
             setActiveTab("return");
             setReturnModalOpen(true);
           }}
-          className="bg-white border border-slate-200/90 hover:border-teal-600 p-5 rounded-2xl shadow-xs text-left transition flex items-center justify-between group"
+          className="bg-white border border-slate-200/90 hover:border-[#0d7a55] p-5 rounded-2xl shadow-xs text-left transition flex items-center justify-between group cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200/60 group-hover:bg-teal-700 group-hover:text-white transition">
+            <div className="w-11 h-11 rounded-full bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center shrink-0 group-hover:bg-[#0d7a55] group-hover:text-white transition">
               <RotateCcw className="w-5 h-5" />
             </div>
             <div>
@@ -607,16 +637,16 @@ export default function StaffCirculationPage() {
               </p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-teal-700 group-hover:translate-x-1 transition" />
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0d7a55] group-hover:translate-x-1 transition" />
         </button>
 
         {/* Card 2: Reservation queue */}
         <button
           onClick={() => setReservationModalOpen(true)}
-          className="bg-white border border-slate-200/90 hover:border-amber-600 p-5 rounded-2xl shadow-xs text-left transition flex items-center justify-between group"
+          className="bg-white border border-slate-200/90 hover:border-amber-500 p-5 rounded-2xl shadow-xs text-left transition flex items-center justify-between group cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200/60 group-hover:bg-amber-700 group-hover:text-white transition">
+            <div className="w-11 h-11 rounded-full bg-[#fef3c7] text-[#d97706] flex items-center justify-center shrink-0 group-hover:bg-[#d97706] group-hover:text-white transition">
               <Clock className="w-5 h-5" />
             </div>
             <div>
@@ -624,7 +654,7 @@ export default function StaffCirculationPage() {
               <p className="text-xs text-slate-500 mt-0.5">27 titles awaiting pickup</p>
             </div>
           </div>
-          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-700 group-hover:translate-x-1 transition" />
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#d97706] group-hover:translate-x-1 transition" />
         </button>
       </div>
 
@@ -633,16 +663,16 @@ export default function StaffCirculationPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="font-serif font-bold text-slate-900 text-sm">
+              <span className="font-bold text-slate-900 text-sm">
                 Scan Accession / Barcode
               </span>
-              <button onClick={() => setScanModalOpen(false)}>
-                <X className="w-4 h-4 text-slate-400" />
+              <button onClick={() => setScanModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="border-2 border-dashed border-teal-600/60 rounded-2xl p-8 bg-teal-50/40 text-center space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center animate-pulse">
+            <div className="border-2 border-dashed border-emerald-600/60 rounded-2xl p-8 bg-emerald-50/40 text-center space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-100 text-[#0d7a55] flex items-center justify-center animate-pulse">
                 <Scan className="w-6 h-6" />
               </div>
               <p className="text-xs text-slate-600">
@@ -658,14 +688,14 @@ export default function StaffCirculationPage() {
                   placeholder="ACC-2024-0043"
                   value={scanCode}
                   onChange={(e) => setScanCode(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                 />
                 <button
                   onClick={() => {
                     showToast(`Found book record for ${scanCode || "ACC-2024-0043"}.`);
                     setScanModalOpen(false);
                   }}
-                  className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-xl font-medium"
+                  className="px-4 py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-xl font-medium cursor-pointer"
                 >
                   Lookup
                 </button>
@@ -680,11 +710,11 @@ export default function StaffCirculationPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="font-serif font-bold text-slate-900 text-sm">
+              <span className="font-bold text-slate-900 text-sm">
                 Issue Book to Member
               </span>
-              <button onClick={() => setIssueModalOpen(false)}>
-                <X className="w-4 h-4 text-slate-400" />
+              <button onClick={() => setIssueModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -699,7 +729,7 @@ export default function StaffCirculationPage() {
                   placeholder="MBR-2024-0185"
                   value={issueMember}
                   onChange={(e) => setIssueMember(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                 />
               </div>
 
@@ -713,7 +743,7 @@ export default function StaffCirculationPage() {
                   placeholder="ACC-2024-0043"
                   value={issueBookAcc}
                   onChange={(e) => setIssueBookAcc(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                 />
               </div>
 
@@ -725,14 +755,14 @@ export default function StaffCirculationPage() {
                 <button
                   type="button"
                   onClick={() => setIssueModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingIssue}
-                  className="px-4 py-2 rounded-xl bg-teal-700 text-white font-medium hover:bg-teal-800"
+                  className="px-4 py-2 rounded-xl bg-[#0d7a55] text-white font-medium hover:bg-[#0a6344] cursor-pointer"
                 >
                   {isSubmittingIssue ? "Issuing..." : "Complete Issue"}
                 </button>
@@ -747,11 +777,11 @@ export default function StaffCirculationPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="font-serif font-bold text-slate-900 text-sm">
+              <span className="font-bold text-slate-900 text-sm">
                 Process Book Return
               </span>
-              <button onClick={() => setReturnModalOpen(false)}>
-                <X className="w-4 h-4 text-slate-400" />
+              <button onClick={() => setReturnModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -766,7 +796,7 @@ export default function StaffCirculationPage() {
                   placeholder="ACC-2023-0318"
                   value={returnAcc}
                   onChange={(e) => setReturnAcc(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-teal-600"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                 />
               </div>
 
@@ -774,14 +804,14 @@ export default function StaffCirculationPage() {
                 <button
                   type="button"
                   onClick={() => setReturnModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingReturn}
-                  className="px-4 py-2 rounded-xl bg-teal-700 text-white font-medium hover:bg-teal-800"
+                  className="px-4 py-2 rounded-xl bg-[#0d7a55] text-white font-medium hover:bg-[#0a6344] cursor-pointer"
                 >
                   {isSubmittingReturn ? "Processing..." : "Process Check-in"}
                 </button>
@@ -797,13 +827,13 @@ export default function StaffCirculationPage() {
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h4 className="font-serif font-bold text-slate-900 text-sm">
+                <h4 className="font-bold text-slate-900 text-sm">
                   Active Reservation Queue
                 </h4>
                 <p className="text-xs text-slate-500">27 patrons waiting for copy returns</p>
               </div>
-              <button onClick={() => setReservationModalOpen(false)}>
-                <X className="w-4 h-4 text-slate-400" />
+              <button onClick={() => setReservationModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -828,7 +858,7 @@ export default function StaffCirculationPage() {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setReservationModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 text-xs"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 text-xs cursor-pointer"
               >
                 Close
               </button>

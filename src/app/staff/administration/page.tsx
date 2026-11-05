@@ -37,23 +37,20 @@ export default function StaffAdministrationPage() {
 
       {/* Header */}
       <div>
-        <p className="text-[10px] tracking-widest uppercase font-semibold text-teal-700">
-          System Governance
-        </p>
-        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 mt-0.5">
-          Administration & Policy
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          System Administration & Policies
         </h1>
-        <p className="text-xs text-slate-500 mt-1">
-          Branch settings, fine calculation rules, and staff role permissions.
+        <p className="text-xs text-slate-500 mt-0.5">
+          Branch settings, fine calculation rules, and circulation policy limits
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Circulation & Lending Policy */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3.5">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <Clock className="w-4 h-4 text-teal-700" />
-            <h3 className="font-serif font-bold text-slate-900 text-sm">
+            <h3 className="font-semibold text-slate-900 text-xs">
               Lending & Loan Periods
             </h3>
           </div>
@@ -98,10 +95,10 @@ export default function StaffAdministrationPage() {
         </div>
 
         {/* Fines & Tariffs */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3.5">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <IndianRupee className="w-4 h-4 text-teal-700" />
-            <h3 className="font-serif font-bold text-slate-900 text-sm">
+            <h3 className="font-semibold text-slate-900 text-xs">
               Overdue Fine Tariff & Grace Rules
             </h3>
           </div>
