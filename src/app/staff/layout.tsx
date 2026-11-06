@@ -377,19 +377,7 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
 
               {/* 4. Quick Actions & Portal Links */}
-              <div className="py-1 border-b border-slate-100">
-                <Link
-                  href="/"
-                  onClick={() => setProfileMenuOpen(false)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-slate-700 hover:bg-slate-50 transition font-medium"
-                >
-                  <div className="flex items-center gap-2">
-                    <ExternalLink className="w-4 h-4 text-[#0d7a55]" />
-                    <span>Public OPAC Portal</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400">Citizen View ↗</span>
-                </Link>
-
+              <div className="py-1">
                 <button
                   onClick={() => {
                     setProfileMenuOpen(false);
@@ -412,20 +400,6 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${previewData ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-500"}`}>
                     {previewData ? "Active" : "Off"}
                   </span>
-                </button>
-              </div>
-
-              {/* 5. Sign Out */}
-              <div className="pt-1.5 px-2">
-                <button
-                  onClick={async () => {
-                    await fetch("/api/auth/logout", { method: "POST" });
-                    router.push("/login");
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl transition text-left cursor-pointer font-medium"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign out of Console</span>
                 </button>
               </div>
             </div>

@@ -97,10 +97,10 @@ export default function ReservationButton({
           </div>
           {errorMessage.includes("sign in") && (
             <Link
-              href="/login"
+              href="/staff/overview"
               className="text-center py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg font-semibold text-xs transition"
             >
-              Go to Member Sign In
+              Go to Dashboard
             </Link>
           )}
         </div>

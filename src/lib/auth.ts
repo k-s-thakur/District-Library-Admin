@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 
 const JWT_SECRET_STRING = process.env.JWT_SECRET || "smart-library-default-secure-key-2026";
 const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
@@ -69,9 +70,38 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("library_session")?.value;
-    if (!token) return null;
-    return await verifySessionToken(token);
+    if (token) {
+      const user = await verifySessionToken(token);
+      if (user) return user;
+    }
+
+    // Default to Super Admin so login is not required
+    const defaultStaff =
+      (await prisma.staffUser.findFirst({
+        where: { role: "SUPER_ADMIN" },
+      })) || (await prisma.staffUser.findFirst());
+
+    if (defaultStaff) {
+      return {
+        id: defaultStaff.id,
+        email: defaultStaff.email,
+        name: defaultStaff.name,
+        role: defaultStaff.role as UserRole,
+      };
+    }
+
+    return {
+      id: "super-admin-default",
+      email: "superadmin@library.gov.in",
+      name: "Dr. K. S. Thakur",
+      role: "SUPER_ADMIN",
+    };
   } catch {
-    return null;
+    return {
+      id: "super-admin-default",
+      email: "superadmin@library.gov.in",
+      name: "Dr. K. S. Thakur",
+      role: "SUPER_ADMIN",
+    };
   }
 }
