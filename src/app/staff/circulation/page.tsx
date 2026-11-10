@@ -92,6 +92,45 @@ export default function StaffCirculationPage() {
 
   // Scan simulation state
   const [scanCode, setScanCode] = useState("");
+  const [isLookingUpScan, setIsLookingUpScan] = useState(false);
+
+  const handleScanLookup = async (code: string) => {
+    if (!code.trim()) return;
+    setIsLookingUpScan(true);
+    try {
+      const res = await fetch(`/api/catalog/copies?search=${encodeURIComponent(code.trim())}&limit=5`);
+      if (res.ok) {
+        const data = await res.json();
+        const match = data.items?.find(
+          (c: any) =>
+            c.accessionNo.toLowerCase() === code.trim().toLowerCase() ||
+            c.qrToken?.toLowerCase() === code.trim().toLowerCase()
+        ) || data.items?.[0];
+
+        if (match) {
+          setScanModalOpen(false);
+          setScanCode("");
+          if (match.status === "AVAILABLE") {
+            setIssueBookAcc(match.accessionNo);
+            setIssueModalOpen(true);
+            showToast(`Found available copy: "${match.title}" (${match.accessionNo}). Ready to issue.`);
+          } else if (match.status === "ISSUED") {
+            setReturnAcc(match.accessionNo);
+            setReturnModalOpen(true);
+            showToast(`Copy is currently on loan: "${match.title}" (${match.accessionNo}). Ready for check-in.`);
+          } else {
+            showToast(`Copy status is ${match.status}: "${match.title}" (${match.accessionNo}).`);
+          }
+          return;
+        }
+      }
+      showToast(`No catalog copy record found matching: ${code}`);
+    } catch (err: any) {
+      showToast(`Lookup error: ${err.message}`);
+    } finally {
+      setIsLookingUpScan(false);
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -747,27 +786,32 @@ export default function StaffCirculationPage() {
               </p>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <label className="text-slate-600 font-medium">Or type Accession code:</label>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleScanLookup(scanCode);
+              }}
+              className="space-y-2 text-xs"
+            >
+              <label className="text-slate-600 font-medium">Or type Accession / Barcode:</label>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="ACC-2024-0043"
+                  placeholder="e.g. ACC-2026-0024"
                   value={scanCode}
                   onChange={(e) => setScanCode(e.target.value)}
                   className="flex-1 px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                  autoFocus
                 />
                 <button
-                  onClick={() => {
-                    showToast(`Found book record for ${scanCode || "ACC-2024-0043"}.`);
-                    setScanModalOpen(false);
-                  }}
-                  className="px-4 py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-xl font-medium cursor-pointer"
+                  type="submit"
+                  disabled={isLookingUpScan || !scanCode.trim()}
+                  className="px-4 py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-xl font-medium cursor-pointer disabled:opacity-50"
                 >
-                  Lookup
+                  {isLookingUpScan ? "Scanning..." : "Lookup"}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
