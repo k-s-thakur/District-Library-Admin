@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileText,
   Download,
@@ -13,45 +13,100 @@ import {
   IndianRupee,
   CheckCircle2,
   Printer,
+  RefreshCw,
 } from "lucide-react";
 
+interface CategoryStat {
+  name: string;
+  count: number;
+  pct: number;
+}
+
+interface TopBookStat {
+  title: string;
+  author: string;
+  loans: number;
+}
+
+interface AnalyticsData {
+  monthlyCheckouts: number;
+  onTimeReturnRate: string;
+  revenueCollected: number;
+  newMemberEnrolments: number;
+  categoryBreakdown: CategoryStat[];
+  topBorrowedTitles: TopBookStat[];
+}
+
 export default function StaffReportsPage() {
-  const [reportType, setReportType] = useState("circulation");
-  const [dateRange, setDateRange] = useState("October 2026");
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
+    monthlyCheckouts: 0,
+    onTimeReturnRate: "0%",
+    revenueCollected: 0,
+    newMemberEnrolments: 0,
+    categoryBreakdown: [],
+    topBorrowedTitles: [],
+  });
+  const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const loadAnalytics = () => {
+    setLoading(true);
+    fetch("/api/reports/analytics")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.analytics) {
+          setAnalytics(data.analytics);
+        }
+      })
+      .catch((err) => console.error("Error loading analytics", err))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAnalytics();
+  }, []);
+
   const handleExportCSV = () => {
-    const categoriesData = [
-      ["Category", "Loans", "Share %"],
-      ["History & Geography (900s)", "1732", "36%"],
-      ["Pure & Applied Sciences (500s/600s)", "1154", "24%"],
-      ["Literature & Fiction (800s)", "1010", "21%"],
-      ["Social Sciences (300s)", "577", "12%"],
-      ["Philosophy & Psychology (100s)", "339", "7%"],
+    const categoriesRows = [
+      ["--- Category Circulation Breakdown ---"],
+      ["Category", "Loans Count", "Share %"],
+      ...analytics.categoryBreakdown.map((c) => [c.name, String(c.count), `${c.pct}%`]),
     ];
 
-    const titlesData = [
+    const titlesRows = [
       [],
-      ["Top Borrowed Titles", "Author", "Total Loans"],
-      ["The Discovery of India", "Jawaharlal Nehru", "94"],
-      ["Wings of Fire", "A. P. J. Abdul Kalam", "88"],
-      ["India After Gandhi", "Ramachandra Guha", "72"],
-      ["A Brief History of Time", "Stephen Hawking", "65"],
-      ["The God of Small Things", "Arundhati Roy", "59"],
+      ["--- Top Borrowed Titles ---"],
+      ["Title", "Author", "Total Loans"],
+      ...analytics.topBorrowedTitles.map((t) => [`"${t.title.replace(/"/g, '""')}"`, `"${t.author}"`, String(t.loans)]),
+    ];
+
+    const summaryRows = [
+      ["--- Library Executive Summary ---"],
+      ["Metric", "Value"],
+      ["Monthly Checkouts", String(analytics.monthlyCheckouts)],
+      ["On-time Return Rate", analytics.onTimeReturnRate],
+      ["Revenue Collected (INR)", `Rs. ${analytics.revenueCollected}`],
+      ["New Member Enrolments", String(analytics.newMemberEnrolments)],
+      [],
     ];
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
-      [...categoriesData, ...titlesData].map((e) => e.join(",")).join("\n");
+      [...summaryRows, ...categoriesRows, ...titlesRows].map((e) => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `District_Library_Audit_Report_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `District_Library_Official_Report_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    showToast("Comprehensive monthly audit dataset exported as CSV.");
+    showToast("Official library analytics dataset exported as CSV.");
   };
 
   return (
@@ -67,18 +122,25 @@ export default function StaffReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Reports & Insights
+            Reports & Operational Insights
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Generate monthly circulation, collection usage, and audit reports
+            Audit-grade circulation summaries, collection analytics, and revenue reports
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            onClick={loadAnalytics}
+            className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 transition cursor-pointer"
+            title="Refresh Live Data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+          <button
             onClick={() => {
               window.print();
-              showToast("Printing official monthly report.");
+              showToast("Printing official report document.");
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer"
           >
@@ -98,19 +160,27 @@ export default function StaffReportsPage() {
       {/* 4 Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <div className="text-2xl font-bold text-slate-900 tabular-nums">4,812</div>
+          <div className="text-2xl font-bold text-slate-900 tabular-nums">
+            {loading ? "..." : analytics.monthlyCheckouts}
+          </div>
           <div className="text-xs text-slate-500 mt-0.5">Monthly Checkouts</div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <div className="text-2xl font-bold text-teal-700 tabular-nums">96.8%</div>
+          <div className="text-2xl font-bold text-teal-700 tabular-nums">
+            {loading ? "..." : analytics.onTimeReturnRate}
+          </div>
           <div className="text-xs text-slate-500 mt-0.5">On-time Return Rate</div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <div className="text-2xl font-bold text-slate-900 tabular-nums">₹ 18,620</div>
+          <div className="text-2xl font-bold text-slate-900 tabular-nums">
+            ₹ {loading ? "..." : analytics.revenueCollected.toLocaleString("en-IN")}
+          </div>
           <div className="text-xs text-slate-500 mt-0.5">Revenue Collected</div>
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
-          <div className="text-2xl font-bold text-blue-700 tabular-nums">142</div>
+          <div className="text-2xl font-bold text-blue-700 tabular-nums">
+            {loading ? "..." : analytics.newMemberEnrolments}
+          </div>
           <div className="text-xs text-slate-500 mt-0.5">New Member Enrolments</div>
         </div>
       </div>
@@ -120,29 +190,27 @@ export default function StaffReportsPage() {
         {/* Most Borrowed Categories */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-3">
           <h3 className="text-sm font-bold text-slate-900">
-            Circulation by Category (October 2026)
+            Circulation by Category
           </h3>
           <div className="space-y-3 text-xs">
-            {[
-              { name: "History & Geography (900s)", pct: 36, count: 1732 },
-              { name: "Pure & Applied Sciences (500s/600s)", pct: 24, count: 1154 },
-              { name: "Literature & Fiction (800s)", pct: 21, count: 1010 },
-              { name: "Social Sciences (300s)", pct: 12, count: 577 },
-              { name: "Philosophy & Psychology (100s)", pct: 7, count: 339 },
-            ].map((cat, i) => (
-              <div key={i} className="space-y-1">
-                <div className="flex justify-between font-medium text-slate-700">
-                  <span>{cat.name}</span>
-                  <span className="font-mono">{cat.count} loans ({cat.pct}%)</span>
+            {analytics.categoryBreakdown.length === 0 ? (
+              <p className="text-slate-400 py-4 text-center">No category circulation data found.</p>
+            ) : (
+              analytics.categoryBreakdown.map((cat, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between font-medium text-slate-700">
+                    <span>{cat.name}</span>
+                    <span className="font-mono">{cat.count} loans ({cat.pct}%)</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div
+                      style={{ width: `${Math.min(cat.pct, 100)}%` }}
+                      className="h-full bg-teal-600 rounded-full transition-all duration-500"
+                    />
+                  </div>
                 </div>
-                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    style={{ width: `${cat.pct}%` }}
-                    className="h-full bg-teal-600 rounded-full"
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -152,23 +220,21 @@ export default function StaffReportsPage() {
             Top Borrowed Titles
           </h3>
           <div className="divide-y divide-slate-100 text-xs">
-            {[
-              { title: "The Discovery of India", author: "Jawaharlal Nehru", loans: 94 },
-              { title: "Wings of Fire", author: "A. P. J. Abdul Kalam", loans: 88 },
-              { title: "India After Gandhi", author: "Ramachandra Guha", loans: 72 },
-              { title: "A Brief History of Time", author: "Stephen Hawking", loans: 65 },
-              { title: "The God of Small Things", author: "Arundhati Roy", loans: 59 },
-            ].map((b, i) => (
-              <div key={i} className="py-2.5 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-slate-900">{b.title}</p>
-                  <p className="text-[11px] text-slate-400">{b.author}</p>
+            {analytics.topBorrowedTitles.length === 0 ? (
+              <p className="text-slate-400 py-4 text-center">No title loan events recorded.</p>
+            ) : (
+              analytics.topBorrowedTitles.map((b, i) => (
+                <div key={i} className="py-2.5 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-slate-900">{b.title}</p>
+                    <p className="text-[11px] text-slate-400">{b.author}</p>
+                  </div>
+                  <span className="font-mono font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                    {b.loans} loans
+                  </span>
                 </div>
-                <span className="font-mono font-semibold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
-                  {b.loans} loans
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
