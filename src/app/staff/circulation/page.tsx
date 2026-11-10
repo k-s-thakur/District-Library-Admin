@@ -19,6 +19,7 @@ import {
   HelpCircle,
   Bell,
 } from "lucide-react";
+import { CameraScannerModal } from "@/components/CameraScannerModal";
 
 interface FollowUpItem {
   id: string;
@@ -822,57 +823,14 @@ export default function StaffCirculationPage() {
         </button>
       </div>
 
-      {/* SCAN MODAL */}
-      {scanModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="font-bold text-slate-900 text-sm">
-                Scan Accession / Barcode
-              </span>
-              <button onClick={() => setScanModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="border-2 border-dashed border-emerald-600/60 rounded-2xl p-8 bg-emerald-50/40 text-center space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-xl bg-emerald-100 text-[#0d7a55] flex items-center justify-center animate-pulse">
-                <Scan className="w-6 h-6" />
-              </div>
-              <p className="text-xs text-slate-600">
-                Hold barcode label or QR token up to optical scanner
-              </p>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleScanLookup(scanCode);
-              }}
-              className="space-y-2 text-xs"
-            >
-              <label className="text-slate-600 font-medium">Or type Accession / Barcode:</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. ACC-2026-0024"
-                  value={scanCode}
-                  onChange={(e) => setScanCode(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  disabled={isLookingUpScan || !scanCode.trim()}
-                  className="px-4 py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-xl font-medium cursor-pointer disabled:opacity-50"
-                >
-                  {isLookingUpScan ? "Scanning..." : "Lookup"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* CAMERA & OPTICAL BARCODE SCANNER MODAL */}
+      <CameraScannerModal
+        isOpen={scanModalOpen}
+        onClose={() => setScanModalOpen(false)}
+        onScan={handleScanLookup}
+        title="Circulation Optical Scanner"
+        subtitle="Align accession barcode (Code-128) or member QR pass to camera"
+      />
 
       {/* ISSUE MODAL */}
       {issueModalOpen && (
