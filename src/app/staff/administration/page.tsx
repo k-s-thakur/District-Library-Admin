@@ -16,6 +16,7 @@ import {
   Search,
   Filter,
   RefreshCw,
+  Download,
 } from "lucide-react";
 
 interface StaffMember {
@@ -63,6 +64,38 @@ export default function StaffAdministrationPage() {
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [actionFilter, setActionFilter] = useState("ALL");
   const [auditSearch, setAuditSearch] = useState("");
+
+  // Backup state
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
+
+  const handleDownloadBackup = async () => {
+    setDownloadingBackup(true);
+    try {
+      const res = await fetch("/api/administration/backup");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to download database backup");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `GPLMS_Database_Backup_${new Date().toISOString().split("T")[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setMessage("Database JSON snapshot successfully downloaded.");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3500);
+    } catch (e: any) {
+      setMessage(`Backup error: ${e.message}`);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+    } finally {
+      setDownloadingBackup(false);
+    }
+  };
 
   const loadPolicies = () => {
     fetch("/api/administration/policies")
@@ -204,8 +237,19 @@ export default function StaffAdministrationPage() {
           </p>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={handleDownloadBackup}
+            disabled={downloadingBackup}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer disabled:opacity-50"
+            title="Download full JSON database snapshot for audit and disaster recovery"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <span>{downloadingBackup ? "Exporting Backup..." : "Export Backup (JSON)"}</span>
+          </button>
+
+          {/* Tab Switcher */}
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-medium">
           <button
             onClick={() => setActiveTab("policies")}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition cursor-pointer ${
@@ -241,6 +285,7 @@ export default function StaffAdministrationPage() {
           </button>
         </div>
       </div>
+    </div>
 
       {/* TAB 1: POLICIES */}
       {activeTab === "policies" && (
