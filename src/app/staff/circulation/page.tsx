@@ -20,6 +20,7 @@ import {
   Bell,
 } from "lucide-react";
 import { CameraScannerModal } from "@/components/CameraScannerModal";
+import { CirculationSlipModal, CirculationSlipData } from "@/components/CirculationSlipModal";
 
 interface FollowUpItem {
   id: string;
@@ -67,6 +68,9 @@ export default function StaffCirculationPage() {
   const [reservationModalOpen, setReservationModalOpen] = useState(false);
   const [liveReservations, setLiveReservations] = useState<any[]>([]);
   const [loadingReservations, setLoadingReservations] = useState(false);
+
+  // Printable Circulation Slip Voucher State
+  const [slipData, setSlipData] = useState<CirculationSlipData | null>(null);
 
   const fetchReservations = async () => {
     setLoadingReservations(true);
@@ -324,6 +328,15 @@ export default function StaffCirculationPage() {
         throw new Error(data.error || "Failed to issue book");
       }
       showToast(`Book successfully issued to ${data.member?.name || issueMember}.`);
+      setSlipData({
+        type: "ISSUE",
+        timestamp: new Date().toISOString(),
+        memberName: data.member?.name || issueMember,
+        memberNo: data.member?.memberNo || issueMember,
+        bookTitle: data.book?.title || "Library Book",
+        accessionNo: data.book?.accessionNo || issueBookAcc,
+        dueDate: data.loan?.dueDate ? new Date(data.loan.dueDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : undefined,
+      });
       setIssueMember("");
       setIssueBookAcc("");
       setIssueModalOpen(false);
@@ -355,6 +368,15 @@ export default function StaffCirculationPage() {
       } else {
         showToast(`Accession ${returnAcc} successfully returned to stacks.`);
       }
+      setSlipData({
+        type: "RETURN",
+        timestamp: new Date().toISOString(),
+        memberName: data.member?.fullName || "Library Patron",
+        memberNo: data.member?.memberNo || "MBR-ID",
+        bookTitle: data.book?.title || "Returned Book",
+        accessionNo: data.book?.accessionNo || returnAcc,
+        fineAmount: data.assessedFineAmount || 0,
+      });
       setReturnAcc("");
       setReturnModalOpen(false);
       await loadData();
@@ -999,6 +1021,13 @@ export default function StaffCirculationPage() {
           </div>
         </div>
       )}
+
+      {/* PRINTABLE CIRCULATION SLIP MODAL */}
+      <CirculationSlipModal
+        isOpen={!!slipData}
+        onClose={() => setSlipData(null)}
+        data={slipData}
+      />
     </div>
   );
 }
