@@ -29,40 +29,7 @@ interface FollowUpItem {
   reminded?: boolean;
 }
 
-const initialFollowUps: FollowUpItem[] = [
-  {
-    id: "f-1",
-    member: "Rahul Verma",
-    memberSubtitle: "Member record - sample",
-    book: "The Discovery of India",
-    dueDate: "21 Oct 2026",
-    followUp: "Due today",
-  },
-  {
-    id: "f-2",
-    member: "Sana Qureshi",
-    memberSubtitle: "Member record - sample",
-    book: "The Argumentative Indian",
-    dueDate: "21 Oct 2026",
-    followUp: "Due today",
-  },
-  {
-    id: "f-3",
-    member: "Arjun Mehta",
-    memberSubtitle: "Member record - sample",
-    book: "India After Gandhi",
-    dueDate: "21 Oct 2026",
-    followUp: "Overdue 2 days",
-  },
-  {
-    id: "f-4",
-    member: "Riya Kapoor",
-    memberSubtitle: "Member record - sample",
-    book: "A Fine Balance",
-    dueDate: "21 Oct 2026",
-    followUp: "Due tomorrow",
-  },
-];
+const initialFollowUps: FollowUpItem[] = [];
 
 interface ActiveLoanRecord {
   id: string;
@@ -76,41 +43,7 @@ interface ActiveLoanRecord {
   status: "ACTIVE" | "OVERDUE";
 }
 
-const initialActiveLoans: ActiveLoanRecord[] = [
-  {
-    id: "l-1",
-    memberNo: "MBR-2023-0984",
-    memberName: "Rahul Verma",
-    accessionNo: "ACC-2024-0043",
-    bookTitle: "The Discovery of India",
-    issuedAt: "07 Oct 2026",
-    dueDate: "21 Oct 2026",
-    renewals: 0,
-    status: "ACTIVE",
-  },
-  {
-    id: "l-2",
-    memberNo: "MBR-2024-0185",
-    memberName: "Aranya Sharma",
-    accessionNo: "ACC-2024-0913",
-    bookTitle: "A Brief History of Time",
-    issuedAt: "10 Oct 2026",
-    dueDate: "24 Oct 2026",
-    renewals: 1,
-    status: "ACTIVE",
-  },
-  {
-    id: "l-3",
-    memberNo: "MBR-2022-0455",
-    memberName: "Kabir Singh",
-    accessionNo: "ACC-2022-0051",
-    bookTitle: "India After Gandhi",
-    issuedAt: "01 Oct 2026",
-    dueDate: "19 Oct 2026",
-    renewals: 0,
-    status: "OVERDUE",
-  },
-];
+const initialActiveLoans: ActiveLoanRecord[] = [];
 
 export default function StaffCirculationPage() {
   const [activeTab, setActiveTab] = useState<"followups" | "issue" | "return" | "active">("followups");
@@ -130,6 +63,23 @@ export default function StaffCirculationPage() {
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [reservationModalOpen, setReservationModalOpen] = useState(false);
+  const [liveReservations, setLiveReservations] = useState<any[]>([]);
+  const [loadingReservations, setLoadingReservations] = useState(false);
+
+  const fetchReservations = async () => {
+    setLoadingReservations(true);
+    try {
+      const res = await fetch("/api/circulation/reserve");
+      if (res.ok) {
+        const data = await res.json();
+        setLiveReservations(data.items || []);
+      }
+    } catch (err) {
+      console.error("Error loading reservations", err);
+    } finally {
+      setLoadingReservations(false);
+    }
+  };
 
   // Issue Form State
   const [issueMember, setIssueMember] = useState("");
@@ -756,7 +706,10 @@ export default function StaffCirculationPage() {
 
         {/* Card 2: Reservation queue */}
         <button
-          onClick={() => setReservationModalOpen(true)}
+          onClick={() => {
+            fetchReservations();
+            setReservationModalOpen(true);
+          }}
           className="bg-white border border-slate-200/90 hover:border-amber-500 p-5 rounded-2xl shadow-xs text-left transition flex items-center justify-between group cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
@@ -944,7 +897,9 @@ export default function StaffCirculationPage() {
                 <h4 className="font-bold text-slate-900 text-sm">
                   Active Reservation Queue
                 </h4>
-                <p className="text-xs text-slate-500">27 patrons waiting for copy returns</p>
+                <p className="text-xs text-slate-500">
+                  {liveReservations.length} patrons waiting in queue
+                </p>
               </div>
               <button onClick={() => setReservationModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-4 h-4" />
@@ -952,21 +907,25 @@ export default function StaffCirculationPage() {
             </div>
 
             <div className="space-y-2 max-h-60 overflow-y-auto text-xs">
-              {[
-                { member: "Priya Sharma", title: "India After Gandhi", wait: "Position #1" },
-                { member: "Amit Sengupta", title: "Wings of Fire", wait: "Position #1" },
-                { member: "Neha Patel", title: "The Discovery of India", wait: "Position #2" },
-              ].map((res, i) => (
-                <div key={i} className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-slate-900">{res.title}</p>
-                    <p className="text-[11px] text-slate-500">Reserved by {res.member}</p>
+              {loadingReservations ? (
+                <p className="text-center py-6 text-slate-400">Loading reservation queue...</p>
+              ) : liveReservations.length === 0 ? (
+                <p className="text-center py-6 text-slate-400">No active book reservations pending in queue.</p>
+              ) : (
+                liveReservations.map((res, i) => (
+                  <div key={res.id || i} className="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-slate-900">{res.title}</p>
+                      <p className="text-[11px] text-slate-500">
+                        Reserved by <span className="font-medium text-slate-700">{res.member}</span> ({res.memberNo})
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      {res.wait}
+                    </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-100 text-amber-800">
-                    {res.wait}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="pt-2 flex justify-end">

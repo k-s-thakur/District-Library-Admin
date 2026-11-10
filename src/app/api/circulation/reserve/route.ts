@@ -42,3 +42,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        status: { in: ["PENDING", "READY_FOR_PICKUP"] },
+      },
+      include: {
+        member: { select: { id: true, name: true, memberNo: true } },
+        book: { select: { id: true, title: true } },
+      },
+      orderBy: [{ bookId: "asc" }, { queuePosition: "asc" }],
+    });
+
+    const items = reservations.map((r) => ({
+      id: r.id,
+      member: r.member.name,
+      memberNo: r.member.memberNo,
+      title: r.book.title,
+      status: r.status,
+      wait: `Position #${r.queuePosition}`,
+      createdAt: r.createdAt,
+    }));
+
+    return NextResponse.json({ items, total: items.length });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
