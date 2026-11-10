@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sliders,
   Shield,
@@ -19,19 +19,86 @@ export default function StaffAdministrationPage() {
   const [gracePeriodDays, setGracePeriodDays] = useState("2");
   const [maxRenewals, setMaxRenewals] = useState("2");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("Library policy configuration saved successfully.");
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch("/api/administration/policies")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.policies && data.policies.length > 0) {
+          const generalPolicy = data.policies.find((p: any) => p.category === "GENERAL_CITIZEN");
+          const studentPolicy = data.policies.find((p: any) => p.category === "STUDENT");
+
+          if (generalPolicy) {
+            setLoanDaysAdult(String(generalPolicy.loanPeriodDays));
+            setFinePerDay(String(generalPolicy.finePerDay));
+            setGracePeriodDays(String(generalPolicy.gracePeriodDays));
+            setMaxRenewals(String(generalPolicy.maxRenewals));
+          }
+          if (studentPolicy) {
+            setLoanDaysStudent(String(studentPolicy.loanPeriodDays));
+          }
+        }
+      })
+      .catch((err) => console.error("Error loading policies", err));
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSaving(true);
+    try {
+      const payload = {
+        policies: [
+          {
+            category: "GENERAL_CITIZEN",
+            loanPeriodDays: Number(loanDaysAdult),
+            maxRenewals: Number(maxRenewals),
+            finePerDay: Number(finePerDay),
+            gracePeriodDays: Number(gracePeriodDays),
+            maxBooksAllowed: 3,
+          },
+          {
+            category: "STUDENT",
+            loanPeriodDays: Number(loanDaysStudent),
+            maxRenewals: Number(maxRenewals) + 1,
+            finePerDay: Math.max(1, Math.floor(Number(finePerDay) / 2)),
+            gracePeriodDays: Number(gracePeriodDays) + 1,
+            maxBooksAllowed: 4,
+          },
+        ],
+      };
+
+      const res = await fetch("/api/administration/policies", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update policies");
+      }
+
+      setMessage("Library policy configuration updated in database successfully.");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3500);
+    } catch (err: any) {
+      setMessage(`Error saving policies: ${err.message}`);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 4000);
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   return (
     <div className="space-y-6">
       {saved && (
         <div className="fixed bottom-6 right-6 z-50 bg-teal-800 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs flex items-center gap-2 border border-teal-500 animate-slide-up">
           <CheckCircle2 className="w-4 h-4 text-teal-300" />
-          <span>Library policy configuration saved successfully.</span>
+          <span>{message}</span>
         </div>
       )}
 
@@ -131,10 +198,11 @@ export default function StaffAdministrationPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-700 text-white text-xs font-semibold hover:bg-teal-800 shadow-xs transition"
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-700 text-white text-xs font-semibold hover:bg-teal-800 disabled:opacity-50 shadow-xs transition cursor-pointer"
               >
                 <Save className="w-4 h-4" />
-                <span>Save Policy Settings</span>
+                <span>{saving ? "Saving Changes..." : "Save Policy Settings"}</span>
               </button>
             </div>
           </div>

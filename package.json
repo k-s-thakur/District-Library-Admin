@@ -8,8 +8,8 @@
     "start": "next start -p 3001",
     "lint": "eslint",
     "db:push": "prisma db push",
-    "seed": "tsx src/lib/seed.ts",
-    "test:acceptance": "tsx scripts/verify_acceptance_tests.ts"
+    "seed": "tsx --env-file=.env src/lib/seed.ts",
+    "test:acceptance": "tsx --env-file=.env scripts/verify_acceptance_tests.ts"
   },
   "dependencies": {
     "@prisma/client": "6.4.1",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Repeat,
   Plus,
@@ -114,8 +114,15 @@ const initialActiveLoans: ActiveLoanRecord[] = [
 
 export default function StaffCirculationPage() {
   const [activeTab, setActiveTab] = useState<"followups" | "issue" | "return" | "active">("followups");
-  const [followUps, setFollowUps] = useState<FollowUpItem[]>(initialFollowUps);
-  const [activeLoans, setActiveLoans] = useState<ActiveLoanRecord[]>(initialActiveLoans);
+  const [followUps, setFollowUps] = useState<FollowUpItem[]>([]);
+  const [activeLoans, setActiveLoans] = useState<ActiveLoanRecord[]>([]);
+  const [summaryMetrics, setSummaryMetrics] = useState({
+    totalActiveLoans: 0,
+    overdueCount: 0,
+    dueTodayCount: 0,
+    dueTomorrowCount: 0,
+  });
+  const [loading, setLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Modals state
@@ -138,8 +145,85 @@ export default function StaffCirculationPage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Followups
+      const fuRes = await fetch("/api/circulation/followups");
+      if (fuRes.ok) {
+        const fuData = await fuRes.json();
+        if (fuData.items) {
+          setFollowUps(
+            fuData.items.map((item: any) => ({
+              id: item.id,
+              member: item.memberName,
+              memberSubtitle: item.memberSubtitle,
+              book: item.bookTitle,
+              dueDate: new Date(item.dueDate).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }),
+              followUp: item.followUp,
+              reminded: false,
+            }))
+          );
+        }
+        if (fuData.summary) {
+          setSummaryMetrics({
+            totalActiveLoans: fuData.summary.totalActiveLoans || 0,
+            overdueCount: fuData.summary.overdueCount || 0,
+            dueTodayCount: fuData.summary.dueTodayCount || 0,
+            dueTomorrowCount: fuData.summary.dueTomorrowCount || 0,
+          });
+        }
+      }
+
+      // 2. Fetch Active Loans
+      const alRes = await fetch("/api/circulation/active");
+      if (alRes.ok) {
+        const alData = await alRes.json();
+        if (alData.loans) {
+          setActiveLoans(
+            alData.loans.map((l: any) => {
+              const due = new Date(l.dueDate);
+              const isOverdue = due < new Date();
+              return {
+                id: l.id,
+                memberNo: l.member?.memberNo || "—",
+                memberName: l.member?.fullName || "—",
+                accessionNo: l.copy?.accessionNo || "—",
+                bookTitle: l.copy?.book?.title || "—",
+                issuedAt: new Date(l.issuedAt).toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }),
+                dueDate: due.toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }),
+                renewals: l.renewalCount || 0,
+                status: isOverdue ? "OVERDUE" : "ACTIVE",
+              };
+            })
+          );
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load circulation data", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleRemind = (id: string, member: string) => {
     setFollowUps((prev) =>
@@ -148,20 +232,22 @@ export default function StaffCirculationPage() {
     showToast(`Reminder notice dispatched to ${member} via SMS & Email.`);
   };
 
-  const handleRenewLoan = (id: string) => {
-    setActiveLoans((prev) =>
-      prev.map((loan) =>
-        loan.id === id
-          ? {
-              ...loan,
-              dueDate: "04 Nov 2026",
-              renewals: loan.renewals + 1,
-              status: "ACTIVE",
-            }
-          : loan
-      )
-    );
-    showToast("Loan successfully renewed for 14 additional days.");
+  const handleRenewLoan = async (id: string) => {
+    try {
+      const res = await fetch("/api/circulation/renew", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loanId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to renew loan");
+      }
+      showToast("Loan successfully renewed for 14 additional days.");
+      await loadData();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    }
   };
 
   const handleExportRegister = () => {
@@ -185,42 +271,62 @@ export default function StaffCirculationPage() {
     showToast("Due register exported as CSV.");
   };
 
-  const handleIssueSubmit = (e: React.FormEvent) => {
+  const handleIssueSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingIssue(true);
-    setTimeout(() => {
-      const newLoan: ActiveLoanRecord = {
-        id: `l-${Date.now()}`,
-        memberNo: issueMember.trim().toUpperCase(),
-        memberName: "Enrolled Member",
-        accessionNo: issueBookAcc.trim().toUpperCase(),
-        bookTitle: "Issued Book Title",
-        issuedAt: "21 Oct 2026",
-        dueDate: "04 Nov 2026",
-        renewals: 0,
-        status: "ACTIVE",
-      };
-      setActiveLoans([newLoan, ...activeLoans]);
-      setIsSubmittingIssue(false);
-      setIssueModalOpen(false);
-      showToast(`Book ${issueBookAcc} issued successfully to ${issueMember}.`);
+    try {
+      const res = await fetch("/api/circulation/issue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberIdentifier: issueMember.trim(),
+          copyIdentifier: issueBookAcc.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to issue book");
+      }
+      showToast(`Book successfully issued to ${data.member?.name || issueMember}.`);
       setIssueMember("");
       setIssueBookAcc("");
-    }, 600);
+      setIssueModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      showToast(`Issue failed: ${err.message}`);
+    } finally {
+      setIsSubmittingIssue(false);
+    }
   };
 
-  const handleReturnSubmit = (e: React.FormEvent) => {
+  const handleReturnSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingReturn(true);
-    setTimeout(() => {
-      setActiveLoans((prev) =>
-        prev.filter((l) => l.accessionNo.toLowerCase() !== returnAcc.trim().toLowerCase())
-      );
-      setIsSubmittingReturn(false);
-      setReturnModalOpen(false);
-      showToast(`Accession ${returnAcc} checked in and returned to stacks.`);
+    try {
+      const res = await fetch("/api/circulation/return", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          copyIdentifier: returnAcc.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to return book");
+      }
+      if (data.isOverdue) {
+        showToast(`Book checked in. Overdue fine assessed: ₹${data.assessedFineAmount}`);
+      } else {
+        showToast(`Accession ${returnAcc} successfully returned to stacks.`);
+      }
       setReturnAcc("");
-    }, 600);
+      setReturnModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      showToast(`Return failed: ${err.message}`);
+    } finally {
+      setIsSubmittingReturn(false);
+    }
   };
 
   return (
@@ -277,19 +383,23 @@ export default function StaffCirculationPage() {
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">1,084</div>
-            <div className="text-xs text-slate-500 mt-0.5">Books on Loan</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {summaryMetrics.totalActiveLoans}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Active Loans</div>
           </div>
         </div>
 
-        {/* Due This Week */}
+        {/* Due Today */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-[#e8f2fe] text-[#2563eb] flex items-center justify-center shrink-0">
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">92</div>
-            <div className="text-xs text-slate-500 mt-0.5">Due This Week</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {summaryMetrics.dueTodayCount}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Due Today</div>
           </div>
         </div>
 
@@ -299,19 +409,23 @@ export default function StaffCirculationPage() {
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-[#dc2626] tabular-nums leading-tight">12</div>
-            <div className="text-xs text-slate-500 mt-0.5">Overdue Accounts</div>
+            <div className="text-2xl font-bold text-[#dc2626] tabular-nums leading-tight">
+              {summaryMetrics.overdueCount}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Overdue Loans</div>
           </div>
         </div>
 
-        {/* Pending Reservations */}
+        {/* Due Tomorrow */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-[#f0edfb] text-[#7c3aed] flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">27</div>
-            <div className="text-xs text-slate-500 mt-0.5">Pending Reservations</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {summaryMetrics.dueTomorrowCount}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Due Tomorrow</div>
           </div>
         </div>
       </div>

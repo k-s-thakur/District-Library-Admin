@@ -1,5 +1,7 @@
 import { prisma } from "../prisma";
 
+const TX_OPTIONS = { maxWait: 20000, timeout: 60000 };
+
 export interface IssueBookParams {
   memberIdentifier: string; // memberNo or memberId
   copyIdentifier: string;   // qrCodeToken or accessionNo or copyId
@@ -108,7 +110,20 @@ export async function issueBook(params: IssueBookParams) {
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + policy.loanDurationDays);
 
-    // 5. Create loan record
+    // 5. Atomic check-and-set copy status to prevent concurrent double-issue
+    const updateResult = await tx.bookCopy.updateMany({
+      where: {
+        id: copy.id,
+        status: { in: ["AVAILABLE", "RESERVED"] },
+      },
+      data: { status: "ISSUED" },
+    });
+
+    if (updateResult.count === 0) {
+      throw new Error(`Physical copy "${copy.accessionNo}" is no longer available (already issued by another process).`);
+    }
+
+    // 6. Create loan record
     const loan = await tx.loan.create({
       data: {
         copyId: copy.id,
@@ -117,12 +132,6 @@ export async function issueBook(params: IssueBookParams) {
         status: "ACTIVE",
         issuedBy: params.actorId,
       },
-    });
-
-    // 6. Update copy status
-    await tx.bookCopy.update({
-      where: { id: copy.id },
-      data: { status: "ISSUED" },
     });
 
     // 7. Fulfill reservation if applicable
@@ -163,7 +172,7 @@ export async function issueBook(params: IssueBookParams) {
         shelfLocation: copy.shelfLocation,
       },
     };
-  });
+  }, TX_OPTIONS);
 }
 
 export async function returnBook(params: ReturnBookParams) {
@@ -304,7 +313,243 @@ export async function returnBook(params: ReturnBookParams) {
       assessedFineAmount,
       feeCharge,
     };
+  }, TX_OPTIONS);
+}
+
+export async function renewLoan(params: RenewLoanParams) {
+  return await prisma.$transaction(async (tx) => {
+    // 1. Find loan with member, copy, book, and reservations
+    const loan = await tx.loan.findUnique({
+      where: { id: params.loanId },
+      include: {
+        member: {
+          include: {
+            feeCharges: { where: { status: { in: ["OUTSTANDING", "PARTIALLY_PAID"] } } },
+          },
+        },
+        copy: {
+          include: {
+            book: {
+              include: {
+                reservations: {
+                  where: { status: { in: ["PENDING", "READY_FOR_PICKUP"] } },
+                  orderBy: { queuePosition: "asc" },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!loan) {
+      throw new Error(`Loan with ID "${params.loanId}" was not found.`);
+    }
+
+    if (loan.status !== "ACTIVE") {
+      throw new Error(`Renewal rejected: Loan is "${loan.status}" and cannot be renewed.`);
+    }
+
+    // 2. Validate member eligibility
+    const member = loan.member;
+    if (member.status !== "ACTIVE") {
+      throw new Error(`Renewal denied: Member status is "${member.status}".`);
+    }
+
+    if (new Date(member.expiryDate) < new Date()) {
+      throw new Error(`Renewal denied: Membership expired on ${new Date(member.expiryDate).toLocaleDateString()}.`);
+    }
+
+    const totalOutstandingDues = member.feeCharges.reduce((acc, c) => acc + c.balance, 0);
+    if (totalOutstandingDues > 200.0) {
+      throw new Error(`Renewal blocked: Member has outstanding dues of ₹${totalOutstandingDues.toFixed(2)}.`);
+    }
+
+    // 3. Check library policy
+    const policy = (await tx.libraryPolicy.findUnique({
+      where: { category: member.category },
+    })) || {
+      loanDurationDays: 14,
+      allowRenewal: true,
+      renewalLimit: 2,
+    };
+
+    if (!policy.allowRenewal) {
+      throw new Error(`Renewal not permitted for member category "${member.category}".`);
+    }
+
+    if (loan.renewalCount >= policy.renewalLimit) {
+      throw new Error(`Maximum renewal limit reached (${loan.renewalCount}/${policy.renewalLimit}). Book must be returned.`);
+    }
+
+    // 4. Check reservation conflict
+    // If another reader has an active hold/reservation on this book, renewal must be rejected
+    const conflictingHold = loan.copy.book.reservations.find((r) => r.memberId !== member.id);
+    if (conflictingHold) {
+      throw new Error(`Renewal denied: Another patron is currently waiting in the reservation queue for this title.`);
+    }
+
+    // 5. Calculate new due date
+    const now = new Date();
+    const currentDueDate = new Date(loan.dueDate);
+    const baseDate = now > currentDueDate ? now : currentDueDate;
+    const newDueDate = new Date(baseDate);
+    newDueDate.setDate(newDueDate.getDate() + policy.loanDurationDays);
+
+    // 6. Update loan
+    const updatedLoan = await tx.loan.update({
+      where: { id: loan.id },
+      data: {
+        dueDate: newDueDate,
+        renewalCount: { increment: 1 },
+      },
+    });
+
+    // 7. Audit log
+    await tx.auditLog.create({
+      data: {
+        actorId: params.actorId,
+        action: "LOAN_RENEWED",
+        entityType: "Loan",
+        entityId: loan.id,
+        metadataJson: JSON.stringify({
+          memberNo: member.memberNo,
+          accessionNo: loan.copy.accessionNo,
+          title: loan.copy.book.title,
+          previousDueDate: currentDueDate.toISOString(),
+          newDueDate: newDueDate.toISOString(),
+          renewalCount: updatedLoan.renewalCount,
+        }),
+      },
+    });
+
+    return {
+      success: true,
+      loan: updatedLoan,
+      newDueDate,
+      renewalCount: updatedLoan.renewalCount,
+      member: {
+        id: member.id,
+        memberNo: member.memberNo,
+        fullName: member.fullName,
+      },
+      book: {
+        title: loan.copy.book.title,
+        accessionNo: loan.copy.accessionNo,
+      },
+    };
+  }, TX_OPTIONS);
+}
+
+export async function getCirculationFollowUps() {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const endOfTomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 23, 59, 59, 999);
+
+  // Fetch active policies for fine calculation
+  const policies = await prisma.libraryPolicy.findMany();
+  const policyMap = new Map<string, (typeof policies)[0]>();
+  for (const p of policies) {
+    policyMap.set(p.category, p);
+  }
+
+  const activeLoans = await prisma.loan.findMany({
+    where: { status: "ACTIVE" },
+    include: {
+      member: {
+        select: {
+          id: true,
+          memberNo: true,
+          fullName: true,
+          phone: true,
+          email: true,
+          category: true,
+        },
+      },
+      copy: {
+        include: {
+          book: {
+            select: {
+              id: true,
+              title: true,
+              isbn: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: { dueDate: "asc" },
   });
+
+  const followUps: any[] = [];
+  let overdueCount = 0;
+  let dueTodayCount = 0;
+  let dueTomorrowCount = 0;
+
+  for (const loan of activeLoans) {
+    const due = new Date(loan.dueDate);
+    let followUpType: "Overdue" | "Due today" | "Due tomorrow" | null = null;
+    let daysOverdue = 0;
+    let estimatedFine = 0.0;
+
+    if (due < startOfToday) {
+      followUpType = "Overdue";
+      overdueCount++;
+      const diffMs = startOfToday.getTime() - due.getTime();
+      daysOverdue = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      const policy = policyMap.get(loan.member.category) || {
+        gracePeriodDays: 2,
+        fineRatePerDay: 2.0,
+        maxFine: 150.0,
+      };
+
+      if (daysOverdue > policy.gracePeriodDays) {
+        const chargeable = daysOverdue - policy.gracePeriodDays;
+        estimatedFine = Math.min(chargeable * policy.fineRatePerDay, policy.maxFine);
+      }
+    } else if (due >= startOfToday && due <= endOfToday) {
+      followUpType = "Due today";
+      dueTodayCount++;
+    } else if (due > endOfToday && due <= endOfTomorrow) {
+      followUpType = "Due tomorrow";
+      dueTomorrowCount++;
+    }
+
+    if (followUpType) {
+      followUps.push({
+        id: loan.id,
+        memberId: loan.member.id,
+        memberNo: loan.member.memberNo,
+        memberName: loan.member.fullName,
+        memberSubtitle: `${loan.member.category} • ${loan.member.memberNo}`,
+        phone: loan.member.phone,
+        email: loan.member.email,
+        bookTitle: loan.copy.book.title,
+        accessionNo: loan.copy.accessionNo,
+        copyId: loan.copy.id,
+        issuedAt: loan.issuedAt,
+        dueDate: loan.dueDate,
+        renewals: loan.renewalCount,
+        followUp: followUpType === "Overdue" ? `Overdue ${daysOverdue} days` : followUpType,
+        followUpType,
+        daysOverdue,
+        estimatedFine,
+      });
+    }
+  }
+
+  return {
+    summary: {
+      totalActiveLoans: activeLoans.length,
+      overdueCount,
+      dueTodayCount,
+      dueTomorrowCount,
+      actionRequiredCount: followUps.length,
+    },
+    items: followUps,
+  };
 }
 
 export async function reserveBook(params: ReserveBookParams) {
@@ -350,5 +595,5 @@ export async function reserveBook(params: ReserveBookParams) {
       queuePosition: nextPosition,
       bookTitle: book.title,
     };
-  });
+  }, TX_OPTIONS);
 }

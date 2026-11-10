@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -13,13 +13,87 @@ import {
   UserPlus,
   TrendingUp,
   LayoutDashboard,
+  CheckCircle2,
+  AlertTriangle,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
 
+interface OverviewMetrics {
+  catalogueTitles: number;
+  totalCopies: number;
+  activeMembers: number;
+  booksOnLoan: number;
+  overdueLoans: number;
+  collectionsToday: number;
+  todayTransactionsCount: number;
+}
+
+interface ActivityItem {
+  id: string;
+  type: string;
+  title: string;
+  detail: string;
+  member: string;
+  time: string;
+}
+
 export default function StaffOverviewPage() {
-  const { setTransactionModalOpen } = useStaff();
+  const { previewData, setTransactionModalOpen } = useStaff();
   const [timeFilter, setTimeFilter] = useState("Today");
   const [activityFilter, setActivityFilter] = useState("Today");
+
+  const [metrics, setMetrics] = useState<OverviewMetrics>({
+    catalogueTitles: 8426,
+    totalCopies: 12680,
+    activeMembers: 3218,
+    booksOnLoan: 1084,
+    overdueLoans: 42,
+    collectionsToday: 2840,
+    todayTransactionsCount: 146,
+  });
+
+  const [activities, setActivities] = useState<ActivityItem[]>([
+    {
+      id: "act-1",
+      type: "return",
+      title: "Book Returned",
+      detail: "The White Tiger · ACC-2024-0012",
+      member: "MBR-2023-3904 (Sunita Rao)",
+      time: "09:42 AM",
+    },
+    {
+      id: "act-2",
+      type: "issue",
+      title: "Book Issued",
+      detail: "Wings of Fire · ACC-2024-0043",
+      member: "MBR-2024-0188 (Priya Vance)",
+      time: "09:12 AM",
+    },
+    {
+      id: "act-3",
+      type: "member",
+      title: "New Member Registered",
+      detail: "Student Category · Quota: 4",
+      member: "MBR-2026-00012 (Aditya Roy)",
+      time: "08:58 AM",
+    },
+  ]);
+
+  useEffect(() => {
+    if (!previewData) {
+      fetch("/api/administration/overview")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.metrics) {
+            setMetrics(data.metrics);
+          }
+          if (data.recentActivities && data.recentActivities.length > 0) {
+            setActivities(data.recentActivities);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [previewData]);
 
   // Clean Chart Data Points
   const chartPoints = [
@@ -50,42 +124,9 @@ export default function StaffOverviewPage() {
     .map((p, i) => `${i === 0 ? "M" : "L"} ${getX(i)} ${getY(p.returns)}`)
     .join(" ");
 
-  const recentActivities = [
-    {
-      id: "act-1",
-      type: "return",
-      title: "Book Returned",
-      detail: "The White Tiger · ACC-2024-0012",
-      member: "MBR-2023-3904 (Sunita Rao)",
-      time: "09:42 AM",
-      icon: RotateCcw,
-      badgeColor: "bg-[#e2f6ee] text-[#0d7a55] border-emerald-200",
-    },
-    {
-      id: "act-2",
-      type: "issue",
-      title: "Book Issued",
-      detail: "Wings of Fire · ACC-2024-0043",
-      member: "MBR-2024-0188 (Priya Vance)",
-      time: "09:12 AM",
-      icon: BookOpen,
-      badgeColor: "bg-blue-50 text-blue-700 border-blue-200",
-    },
-    {
-      id: "act-3",
-      type: "member",
-      title: "New Member Registered",
-      detail: "Student Category · Deposit: ₹500",
-      member: "MBR-2026-00012 (Aditya Roy)",
-      time: "08:58 AM",
-      icon: UserPlus,
-      badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* District Public Library Management Dashboard Banner (Matching Uploaded Image) */}
+      {/* District Public Library Management Dashboard Banner */}
       <div className="relative rounded-2xl overflow-hidden shadow-xs border border-emerald-950/20">
         <img
           src="/images/library-banner.png"
@@ -117,7 +158,9 @@ export default function StaffOverviewPage() {
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">8,426</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {metrics.catalogueTitles.toLocaleString("en-IN")}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Catalogue Titles</div>
           </div>
         </div>
@@ -128,7 +171,9 @@ export default function StaffOverviewPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">3,218</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {metrics.activeMembers.toLocaleString("en-IN")}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Active Members</div>
           </div>
         </div>
@@ -139,7 +184,9 @@ export default function StaffOverviewPage() {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">1,084</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {metrics.booksOnLoan.toLocaleString("en-IN")}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Books on Loan</div>
           </div>
         </div>
@@ -150,7 +197,9 @@ export default function StaffOverviewPage() {
             <IndianRupee className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">₹ 2,840</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              ₹ {metrics.collectionsToday.toLocaleString("en-IN")}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Collections Today</div>
           </div>
         </div>
@@ -182,10 +231,12 @@ export default function StaffOverviewPage() {
             </div>
 
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900 tabular-nums">146</span>
-              <span className="text-xs font-normal text-slate-500">transactions</span>
+              <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                {metrics.todayTransactionsCount}
+              </span>
+              <span className="text-xs font-normal text-slate-500">transactions today</span>
               <span className="text-xs text-[#0d7a55] font-medium flex items-center gap-0.5 ml-2">
-                <TrendingUp className="w-3.5 h-3.5" /> +12.8%
+                <TrendingUp className="w-3.5 h-3.5" /> Live
               </span>
             </div>
           </div>
@@ -300,17 +351,16 @@ export default function StaffOverviewPage() {
 
             <div className="mt-3">
               <span className="text-2xl font-bold text-slate-900 tabular-nums">
-                12,680
+                {metrics.totalCopies.toLocaleString("en-IN")}
               </span>
               <span className="text-xs text-slate-500 ml-1.5">total physical copies</span>
             </div>
 
             {/* Segmented Progress Bar */}
             <div className="w-full h-2.5 rounded-full bg-slate-100 flex overflow-hidden mt-4">
-              <div style={{ width: "58%" }} className="bg-[#0d7a55]" title="Available: 7,354" />
-              <div style={{ width: "31%" }} className="bg-blue-600" title="Issued: 3,934" />
-              <div style={{ width: "6%" }} className="bg-amber-500" title="Reserved: 750" />
-              <div style={{ width: "5%" }} className="bg-slate-400" title="Other: 642" />
+              <div style={{ width: "65%" }} className="bg-[#0d7a55]" title="Available" />
+              <div style={{ width: "25%" }} className="bg-blue-600" title="Issued" />
+              <div style={{ width: "10%" }} className="bg-amber-500" title="Reserved/Other" />
             </div>
 
             {/* Breakdown List */}
@@ -320,7 +370,9 @@ export default function StaffOverviewPage() {
                   <span className="w-2 h-2 rounded-full bg-[#0d7a55]" />
                   <span className="text-slate-700 font-medium">Available on Shelves</span>
                 </div>
-                <span className="font-semibold text-slate-900 font-mono">7,354</span>
+                <span className="font-semibold text-slate-900 font-mono">
+                  {Math.max(0, metrics.totalCopies - metrics.booksOnLoan)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 border-b border-slate-100">
@@ -328,88 +380,141 @@ export default function StaffOverviewPage() {
                   <span className="w-2 h-2 rounded-full bg-blue-600" />
                   <span className="text-slate-700 font-medium">Currently on Loan</span>
                 </div>
-                <span className="font-semibold text-slate-900 font-mono">3,934</span>
+                <span className="font-semibold text-slate-900 font-mono">
+                  {metrics.booksOnLoan}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span className="text-slate-700 font-medium">Held for Reservations</span>
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span className="text-slate-700 font-medium">Overdue Returns</span>
                 </div>
-                <span className="font-semibold text-slate-900 font-mono">750</span>
+                <span className="font-semibold text-rose-700 font-mono">
+                  {metrics.overdueLoans}
+                </span>
               </div>
 
               <div className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-slate-400" />
-                  <span className="text-slate-700 font-medium">Binding & In-Processing</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="text-slate-700 font-medium">Catalog Titles</span>
                 </div>
-                <span className="font-semibold text-slate-900 font-mono">642</span>
+                <span className="font-semibold text-slate-900 font-mono">
+                  {metrics.catalogueTitles}
+                </span>
               </div>
             </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 mt-4">
-            <Link
-              href="/staff/catalogue"
-              className="w-full flex items-center justify-between text-xs font-semibold text-[#0d7a55] hover:text-[#0a6344] transition"
-            >
-              <span>Manage stack inventory</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
         </div>
       </div>
 
-      {/* 4. Bottom Section: Recent Operations */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">
-              Recent Transactions
-            </h3>
-            <p className="text-xs text-slate-500">Live circulation activity log</p>
+      {/* 4. Bottom 2 Panels (Recent Activity & Shortcuts) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left: Recent Activity Feed (2 cols) */}
+        <div className="lg:col-span-2 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Recent Library Activity
+              </h3>
+              <p className="text-xs text-slate-500">Live circulation stream across all desks</p>
+            </div>
+            <Link
+              href="/staff/circulation"
+              className="flex items-center gap-1 text-xs text-slate-600 hover:text-[#0d7a55] font-medium transition"
+            >
+              <span>Circulation Desk</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <Link
-            href="/staff/circulation"
-            className="flex items-center gap-1 text-xs text-[#0d7a55] hover:text-[#0a6344] font-semibold transition"
-          >
-            <span>Circulation Desk</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+
+          <div className="divide-y divide-slate-100 mt-2">
+            {activities.map((act) => {
+              const IconComponent =
+                act.type === "return" ? RotateCcw : act.type === "issue" ? BookOpen : UserPlus;
+              const badgeBg =
+                act.type === "return"
+                  ? "bg-[#e2f6ee] text-[#0d7a55]"
+                  : act.type === "issue"
+                  ? "bg-blue-50 text-blue-700"
+                  : "bg-emerald-50 text-emerald-700";
+
+              return (
+                <div key={act.id} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/60 rounded-xl px-2 transition">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${badgeBg}`}>
+                      <IconComponent className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-slate-900">{act.title}</div>
+                      <div className="text-slate-500 text-[11px]">{act.detail}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-slate-700 font-medium text-[11px]">{act.member}</div>
+                    <div className="text-slate-400 text-[10px]">{act.time}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Activity Rows */}
-        <div className="divide-y divide-slate-100">
-          {recentActivities.map((act) => {
-            const Icon = act.icon;
-            return (
-              <div
-                key={act.id}
-                className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/70 px-1 rounded-xl transition"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${act.badgeColor}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="truncate">
-                    <p className="text-xs font-semibold text-slate-900 leading-tight">
-                      {act.title} · <span className="font-normal text-slate-600">{act.detail}</span>
-                    </p>
-                    <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                      {act.member}
-                    </p>
-                  </div>
-                </div>
+        {/* Right: Quick Action Shortcuts (1 col) */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">
+              Desk Shortcuts
+            </h3>
+            <p className="text-xs text-slate-500">Quick circulation and catalogue actions</p>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] text-slate-400 font-mono">{act.time}</span>
+            <div className="mt-4 space-y-2.5">
+              <Link
+                href="/staff/circulation"
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-[#0d7a55] hover:bg-[#e2f6ee]/30 transition group text-xs cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center group-hover:scale-105 transition">
+                    <BookOpen className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="font-semibold text-slate-800">Issue / Return Book</span>
                 </div>
-              </div>
-            );
-          })}
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#0d7a55] group-hover:translate-x-0.5 transition" />
+              </Link>
+
+              <Link
+                href="/staff/catalogue"
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-[#0d7a55] hover:bg-[#e2f6ee]/30 transition group text-xs cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center group-hover:scale-105 transition">
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="font-semibold text-slate-800">Catalogue Register</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-700 group-hover:translate-x-0.5 transition" />
+              </Link>
+
+              <Link
+                href="/staff/finance"
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-[#0d7a55] hover:bg-[#e2f6ee]/30 transition group text-xs cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center group-hover:scale-105 transition">
+                    <IndianRupee className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="font-semibold text-slate-800">Collect Fines / Reversal</span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-700 group-hover:translate-x-0.5 transition" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-100 text-slate-400 text-[11px] flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#0d7a55]" />
+            <span>Connected to District Public Library Server</span>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,8 @@
 import { prisma } from "../prisma";
 import bcrypt from "bcryptjs";
 
+const TX_OPTIONS = { maxWait: 20000, timeout: 60000 };
+
 export interface RegisterMemberInput {
   fullName: string;
   email: string;
@@ -163,5 +165,124 @@ export async function registerMember(input: RegisterMemberInput) {
     }
 
     return member;
-  });
+  }, TX_OPTIONS);
+}
+
+export interface UpdateMemberInput {
+  fullName?: string;
+  phone?: string;
+  address?: string;
+  category?: "GENERAL_CITIZEN" | "STUDENT" | "SENIOR_CITIZEN" | "RESEARCHER" | "GOVT_STAFF";
+  status?: "ACTIVE" | "EXPIRED" | "SUSPENDED" | "CLOSED";
+  maxBooks?: number;
+}
+
+export async function updateMember(id: string, input: UpdateMemberInput, actorId?: string) {
+  return await prisma.$transaction(async (tx) => {
+    const member = await tx.member.findUnique({ where: { id } });
+    if (!member) throw new Error(`Member with ID "${id}" was not found.`);
+
+    // If changing category, adjust maxBooks if not explicitly set
+    let maxBooks = input.maxBooks;
+    if (input.category && maxBooks === undefined) {
+      const maxBooksMap: Record<string, number> = {
+        GENERAL_CITIZEN: 3,
+        STUDENT: 4,
+        SENIOR_CITIZEN: 5,
+        RESEARCHER: 8,
+        GOVT_STAFF: 5,
+      };
+      maxBooks = maxBooksMap[input.category] || member.maxBooks;
+    }
+
+    const updated = await tx.member.update({
+      where: { id },
+      data: {
+        fullName: input.fullName !== undefined ? input.fullName.trim() : member.fullName,
+        phone: input.phone !== undefined ? input.phone.trim() : member.phone,
+        address: input.address !== undefined ? input.address.trim() : member.address,
+        category: input.category || member.category,
+        status: input.status || member.status,
+        maxBooks: maxBooks !== undefined ? maxBooks : member.maxBooks,
+      },
+    });
+
+    if (actorId) {
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: "MEMBER_UPDATED",
+          entityType: "Member",
+          entityId: id,
+          metadataJson: JSON.stringify({
+            memberNo: member.memberNo,
+            oldStatus: member.status,
+            newStatus: updated.status,
+            category: updated.category,
+          }),
+        },
+      });
+    }
+
+    return updated;
+  }, TX_OPTIONS);
+}
+
+export async function renewMembership(id: string, actorId?: string) {
+  return await prisma.$transaction(async (tx) => {
+    const member = await tx.member.findUnique({
+      where: { id },
+      include: {
+        feeCharges: { where: { status: { in: ["OUTSTANDING", "PARTIALLY_PAID"] } } },
+      },
+    });
+
+    if (!member) throw new Error(`Member with ID "${id}" was not found.`);
+
+    if (member.status === "CLOSED") {
+      throw new Error("Cannot renew a CLOSED membership account. Please re-register.");
+    }
+
+    const totalOutstandingDues = member.feeCharges.reduce((acc, c) => acc + c.balance, 0);
+    if (totalOutstandingDues > 200.0) {
+      throw new Error(`Membership renewal blocked: Member has outstanding dues of ₹${totalOutstandingDues.toFixed(2)}.`);
+    }
+
+    const now = new Date();
+    const currentExpiry = new Date(member.expiryDate);
+    const baseDate = now > currentExpiry ? now : currentExpiry;
+
+    const newExpiryDate = new Date(baseDate);
+    newExpiryDate.setFullYear(newExpiryDate.getFullYear() + 1);
+
+    const updated = await tx.member.update({
+      where: { id },
+      data: {
+        expiryDate: newExpiryDate,
+        status: "ACTIVE",
+      },
+    });
+
+    if (actorId) {
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: "MEMBERSHIP_RENEWED",
+          entityType: "Member",
+          entityId: id,
+          metadataJson: JSON.stringify({
+            memberNo: member.memberNo,
+            previousExpiry: currentExpiry.toISOString(),
+            newExpiryDate: newExpiryDate.toISOString(),
+          }),
+        },
+      });
+    }
+
+    return {
+      success: true,
+      member: updated,
+      newExpiryDate,
+    };
+  }, TX_OPTIONS);
 }

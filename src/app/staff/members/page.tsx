@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
   Users,
   UserPlus,
@@ -19,6 +19,10 @@ import {
   ShieldAlert,
   User,
   HelpCircle,
+  AlertCircle,
+  Ban,
+  Check,
+  RefreshCw,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
 
@@ -29,10 +33,12 @@ interface MemberRecord {
   memberNo: string;
   category: "Adult" | "Student" | "Senior" | "Researcher" | "Govt Staff";
   nextDueDate: string;
-  status: "Active" | "Expired" | "Suspended";
+  status: "Active" | "Expired" | "Suspended" | "Closed";
   email?: string;
   phone?: string;
   address?: string;
+  expiryDate?: string;
+  outstandingDues?: number;
 }
 
 const sampleMembers: MemberRecord[] = [
@@ -101,6 +107,7 @@ const sampleMembers: MemberRecord[] = [
 export default function StaffMembersPage() {
   const { previewData } = useStaff();
   const [membersList, setMembersList] = useState<MemberRecord[]>(sampleMembers);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -111,7 +118,7 @@ export default function StaffMembersPage() {
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [selectedCardMember, setSelectedCardMember] = useState<MemberRecord | null>(null);
   const [activeActionDropdown, setActiveActionDropdown] = useState<string | null>(null);
-  const [notificationToast, setNotificationToast] = useState<string | null>(null);
+  const [notificationToast, setNotificationToast] = useState<{ msg: string; isError?: boolean } | null>(null);
 
   // Registration Form State
   const [newName, setNewName] = useState("");
@@ -123,6 +130,76 @@ export default function StaffMembersPage() {
 
   const filterRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  const showToast = useCallback((msg: string, isError = false) => {
+    setNotificationToast({ msg, isError });
+    setTimeout(() => setNotificationToast(null), 3500);
+  }, []);
+
+  const mapBackendMember = (m: any): MemberRecord => {
+    let cat: "Adult" | "Student" | "Senior" | "Researcher" | "Govt Staff" = "Adult";
+    if (m.category === "STUDENT") cat = "Student";
+    else if (m.category === "SENIOR_CITIZEN") cat = "Senior";
+    else if (m.category === "RESEARCHER") cat = "Researcher";
+    else if (m.category === "GOVT_STAFF") cat = "Govt Staff";
+
+    let stat: "Active" | "Expired" | "Suspended" | "Closed" = "Active";
+    if (m.status === "EXPIRED") stat = "Expired";
+    else if (m.status === "SUSPENDED") stat = "Suspended";
+    else if (m.status === "CLOSED") stat = "Closed";
+
+    const nextDue = m.loans && m.loans[0]
+      ? new Date(m.loans[0].dueDate).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
+
+    const totalDues = Array.isArray(m.feeCharges)
+      ? m.feeCharges.reduce((acc: number, c: any) => acc + (c.balance || 0), 0)
+      : 0;
+
+    return {
+      id: m.id,
+      name: m.fullName,
+      subtitle: m.phone || (m.address ? m.address.slice(0, 30) : "Patron Record"),
+      memberNo: m.memberNo,
+      category: cat,
+      nextDueDate: nextDue,
+      status: stat,
+      email: m.email,
+      phone: m.phone,
+      address: m.address,
+      expiryDate: m.expiryDate,
+      outstandingDues: Number(totalDues.toFixed(2)),
+    };
+  };
+
+  const loadMembers = useCallback(async () => {
+    if (previewData) {
+      setMembersList(sampleMembers);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/members");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.members) {
+          setMembersList(data.members.map(mapBackendMember));
+        }
+      }
+    } catch {
+      // Fallback stays
+    } finally {
+      setLoading(false);
+    }
+  }, [previewData]);
+
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -137,58 +214,26 @@ export default function StaffMembersPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!previewData) {
-      fetch("/api/members")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.members && data.members.length > 0) {
-            const mapped: MemberRecord[] = data.members.map((m: any) => ({
-              id: m.id,
-              name: m.fullName,
-              subtitle: "Member record - sample",
-              memberNo: m.memberNo,
-              category:
-                m.category === "STUDENT"
-                  ? "Student"
-                  : m.category === "SENIOR_CITIZEN"
-                  ? "Senior"
-                  : m.category === "RESEARCHER"
-                  ? "Researcher"
-                  : "Adult",
-              nextDueDate:
-                m.loans && m.loans[0]
-                  ? new Date(m.loans[0].dueDate).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : "—",
-              status: m.status === "ACTIVE" ? "Active" : "Expired",
-              email: m.email,
-              phone: m.phone,
-              address: m.address,
-            }));
-            setMembersList(mapped);
-          }
-        })
-        .catch(() => {});
-    } else {
-      setMembersList(sampleMembers);
-    }
-  }, [previewData]);
-
   const filteredMembers = useMemo(() => {
     return membersList.filter((m) => {
+      const q = searchQuery.toLowerCase().trim();
       const matchSearch =
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.memberNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.email && m.email.toLowerCase().includes(searchQuery.toLowerCase()));
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        m.memberNo.toLowerCase().includes(q) ||
+        (m.email && m.email.toLowerCase().includes(q)) ||
+        (m.phone && m.phone.toLowerCase().includes(q));
       const matchCategory = categoryFilter === "All" || m.category === categoryFilter;
       const matchStatus = statusFilter === "All" || m.status === statusFilter;
       return matchSearch && matchCategory && matchStatus;
     });
   }, [membersList, searchQuery, categoryFilter, statusFilter]);
+
+  // Compute live KPIs
+  const activeCount = useMemo(() => membersList.filter((m) => m.status === "Active").length, [membersList]);
+  const expiredCount = useMemo(() => membersList.filter((m) => m.status === "Expired").length, [membersList]);
+  const suspendedCount = useMemo(() => membersList.filter((m) => m.status === "Suspended").length, [membersList]);
+  const totalCount = membersList.length;
 
   const handleExportCSV = () => {
     const headers = ["Member No", "Name", "Category", "Next Due Date", "Status", "Email", "Phone", "Address"];
@@ -216,68 +261,104 @@ export default function StaffMembersPage() {
     showToast("Member register exported as CSV successfully.");
   };
 
-  const showToast = (msg: string) => {
-    setNotificationToast(msg);
-    setTimeout(() => setNotificationToast(null), 3000);
-  };
-
   const handleRegisterMember = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
-    const generatedNo = `MBR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newRecord: MemberRecord = {
-      id: `m-${Date.now()}`,
-      name: newName.trim(),
-      subtitle: "Member record - sample",
-      memberNo: generatedNo,
-      category: newCategory,
-      nextDueDate: "—",
-      status: "Active",
-      email: newEmail.trim(),
-      phone: newPhone.trim(),
-      address: newAddress.trim(),
+    const categoryEnumMap: Record<string, string> = {
+      Adult: "GENERAL_CITIZEN",
+      Student: "STUDENT",
+      Senior: "SENIOR_CITIZEN",
+      Researcher: "RESEARCHER",
+      "Govt Staff": "GOVT_STAFF",
     };
 
     try {
-      await fetch("/api/members", {
+      const res = await fetch("/api/members", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName: newName.trim(),
-          email: newEmail.trim() || `${generatedNo.toLowerCase()}@janatalibrary.local`,
+          email: newEmail.trim() || `member-${Date.now()}@janatalibrary.local`,
           phone: newPhone.trim() || undefined,
           address: newAddress.trim() || undefined,
-          category: newCategory.toUpperCase().replace(" ", "_"),
+          category: categoryEnumMap[newCategory] || "GENERAL_CITIZEN",
         }),
       });
-    } catch {}
 
-    setMembersList((prev) => [newRecord, ...prev]);
-    setSubmitting(false);
-    setRegisterModalOpen(false);
-    setNewName("");
-    setNewEmail("");
-    setNewPhone("");
-    setNewAddress("");
-    showToast(`Registered member ${newRecord.name} (${newRecord.memberNo}) successfully.`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to register member");
+      }
+
+      showToast(`Registered member ${data.member.fullName} (${data.member.memberNo}) successfully.`);
+      setRegisterModalOpen(false);
+      setNewName("");
+      setNewEmail("");
+      setNewPhone("");
+      setNewAddress("");
+      loadMembers();
+    } catch (err: any) {
+      showToast(err.message || "Registration failed", true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleRenewMember = (id: string) => {
-    setMembersList((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status: "Active", nextDueDate: "21 Nov 2026" } : m))
-    );
+  const handleRenewMember = async (id: string) => {
     setActiveActionDropdown(null);
-    showToast("Membership renewed for 1 academic year.");
+    try {
+      const res = await fetch(`/api/members/${id}/renew`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Renewal failed");
+      }
+      showToast(`Membership renewed successfully until ${new Date(data.newExpiryDate).toLocaleDateString("en-GB")}.`);
+      loadMembers();
+    } catch (err: any) {
+      showToast(err.message || "Renewal failed", true);
+    }
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    setActiveActionDropdown(null);
+    const newStatus = currentStatus === "Active" ? "SUSPENDED" : "ACTIVE";
+    try {
+      const res = await fetch(`/api/members/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Status update failed");
+      }
+      showToast(`Member marked as ${newStatus}.`);
+      loadMembers();
+    } catch (err: any) {
+      showToast(err.message || "Failed to update member status", true);
+    }
   };
 
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
       {notificationToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#0d7a55] text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs flex items-center gap-2 border border-emerald-400">
-          <CheckCircle2 className="w-4 h-4 text-emerald-200" />
-          <span>{notificationToast}</span>
+        <div
+          className={`fixed bottom-6 right-6 z-50 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs flex items-center gap-2 border ${
+            notificationToast.isError
+              ? "bg-rose-700 border-rose-500"
+              : "bg-[#0d7a55] border-emerald-400"
+          }`}
+        >
+          {notificationToast.isError ? (
+            <AlertCircle className="w-4 h-4 text-rose-200" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+          )}
+          <span>{notificationToast.msg}</span>
         </div>
       )}
 
@@ -299,6 +380,16 @@ export default function StaffMembersPage() {
 
         {/* Action Buttons Top Right */}
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => loadMembers()}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold shadow-xs transition cursor-pointer"
+            title="Refresh Directory"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer"
@@ -325,19 +416,23 @@ export default function StaffMembersPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">3,218</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {activeCount}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Active Members</div>
           </div>
         </div>
 
-        {/* Due This Month */}
+        {/* Total Registered */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-[#e8f2fe] text-[#2563eb] flex items-center justify-center shrink-0">
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">146</div>
-            <div className="text-xs text-slate-500 mt-0.5">Renewals Due This Month</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {totalCount}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Total Enrolled</div>
           </div>
         </div>
 
@@ -347,19 +442,23 @@ export default function StaffMembersPage() {
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-[#dc2626] tabular-nums leading-tight">32</div>
+            <div className="text-2xl font-bold text-[#dc2626] tabular-nums leading-tight">
+              {expiredCount}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Expired Memberships</div>
           </div>
         </div>
 
-        {/* New This Week */}
+        {/* Suspended Members */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-[#f0edfb] text-[#7c3aed] flex items-center justify-center shrink-0">
-            <UserPlus className="w-5 h-5" />
+            <Ban className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">18</div>
-            <div className="text-xs text-slate-500 mt-0.5">New This Week</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {suspendedCount}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Suspended Accounts</div>
           </div>
         </div>
       </div>
@@ -372,7 +471,7 @@ export default function StaffMembersPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search member name, ID, or email..."
+            placeholder="Search member name, ID, phone, or email..."
             className="w-full pl-10 pr-3.5 py-2 bg-slate-50/80 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-[#0d7a55] focus:bg-white transition"
           />
         </div>
@@ -432,6 +531,7 @@ export default function StaffMembersPage() {
                   <option value="All">All Statuses</option>
                   <option value="Active">Active</option>
                   <option value="Expired">Expired</option>
+                  <option value="Suspended">Suspended</option>
                 </select>
               </div>
 
@@ -494,7 +594,7 @@ export default function StaffMembersPage() {
                             {member.name}
                           </div>
                           <div className="text-[11px] text-slate-400 mt-0.5">
-                            {member.subtitle}
+                            {member.email || member.subtitle}
                           </div>
                         </div>
                       </div>
@@ -518,10 +618,15 @@ export default function StaffMembersPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-[#0d7a55]" />
                           <span>Active</span>
                         </span>
+                      ) : member.status === "Suspended" ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#fef3c7] text-[#92400e] border border-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#d97706]" />
+                          <span>Suspended</span>
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#fee2e2] text-[#b91c1c] border border-rose-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#b91c1c]" />
-                          <span>Expired</span>
+                          <span>{member.status}</span>
                         </span>
                       )}
                     </td>
@@ -563,13 +668,29 @@ export default function StaffMembersPage() {
                             <span>Renew Membership</span>
                           </button>
                           <button
+                            onClick={() => handleToggleStatus(member.id, member.status)}
+                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                          >
+                            {member.status === "Active" ? (
+                              <>
+                                <Ban className="w-3.5 h-3.5 text-amber-600" />
+                                <span>Suspend Member</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Activate Member</span>
+                              </>
+                            )}
+                          </button>
+                          <button
                             onClick={() => {
                               showToast(`Due reminder notice dispatched to ${member.name}.`);
                               setActiveActionDropdown(null);
                             }}
                             className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
                           >
-                            <Mail className="w-3.5 h-3.5 text-amber-600" />
+                            <Mail className="w-3.5 h-3.5 text-slate-500" />
                             <span>Send Notice</span>
                           </button>
                         </div>
@@ -586,7 +707,7 @@ export default function StaffMembersPage() {
         <div className="py-3 px-5 bg-slate-50/70 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <div className="flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-            <span>Sample member records - personal records are protected under DPDP standards.</span>
+            <span>Digital patron registry synchronized with district records & DPDP privacy standards.</span>
           </div>
           <button
             onClick={() => setPrivacyModalOpen(true)}
@@ -639,10 +760,11 @@ export default function StaffMembersPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-medium mb-1">
-                    Email Address
+                    Email Address *
                   </label>
                   <input
                     type="email"
+                    required
                     placeholder="name@domain.com"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
@@ -673,9 +795,9 @@ export default function StaffMembersPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
                 >
                   <option value="Adult">Adult Citizen (3 titles · 14 days quota)</option>
-                  <option value="Student">Student (5 titles · 21 days quota)</option>
+                  <option value="Student">Student (4 titles · 21 days quota)</option>
                   <option value="Senior">Senior Citizen (5 titles · 30 days · zero fine)</option>
-                  <option value="Researcher">Researcher (7 titles · 30 days quota)</option>
+                  <option value="Researcher">Researcher (8 titles · 30 days quota)</option>
                   <option value="Govt Staff">Government Staff (5 titles · 21 days quota)</option>
                 </select>
               </div>
@@ -704,7 +826,7 @@ export default function StaffMembersPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   {submitting ? "Registering..." : "Confirm & Issue Member No."}
                 </button>

@@ -1,5 +1,7 @@
 import { prisma } from "../prisma";
 
+const TX_OPTIONS = { maxWait: 20000, timeout: 60000 };
+
 export interface AssessChargeInput {
   memberId: string;
   chargeType: "MEMBERSHIP_FEE" | "RENEWAL_FEE" | "LATE_FINE" | "LOST_BOOK" | "DAMAGED_BOOK" | "OTHER_FEE";
@@ -283,7 +285,7 @@ export async function postPayment(input: PostPaymentInput) {
       receipt,
       idempotentReplay: false,
     };
-  });
+  }, TX_OPTIONS);
 }
 
 export async function reversePayment(input: ReversePaymentInput) {
@@ -373,12 +375,80 @@ export async function reversePayment(input: ReversePaymentInput) {
       },
     });
 
+      return {
+        success: true,
+        payment: updatedPayment,
+        reversal,
+      };
+    },
+    TX_OPTIONS
+  );
+}
+
+export interface WaiveChargeInput {
+  chargeId: string;
+  waiverReason: string;
+  waivedBy: string; // Approving Officer / Supervisor
+  actorId: string;
+}
+
+export async function waiveCharge(input: WaiveChargeInput) {
+  if (!input.waiverReason || input.waiverReason.trim().length === 0) {
+    throw new Error("A valid waiver reason is strictly required by audit policy");
+  }
+  if (!input.waivedBy || input.waivedBy.trim().length === 0) {
+    throw new Error("Supervisor / Approving Officer authorization is required to waive a charge");
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const charge = await tx.feeCharge.findUnique({
+      where: { id: input.chargeId },
+      include: { member: true },
+    });
+
+    if (!charge) {
+      throw new Error(`Charge with ID "${input.chargeId}" not found`);
+    }
+
+    if (charge.status === "PAID" || charge.status === "WAIVED") {
+      throw new Error(`Charge is already ${charge.status}`);
+    }
+
+    const waivedAmount = charge.balance;
+
+    const updated = await tx.feeCharge.update({
+      where: { id: charge.id },
+      data: {
+        status: "WAIVED",
+        balance: 0.0,
+        waivedAmount,
+        waiverReason: input.waiverReason,
+        waivedBy: input.waivedBy,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: input.actorId,
+        action: "CHARGE_WAIVED",
+        entityType: "FeeCharge",
+        entityId: charge.id,
+        metadataJson: JSON.stringify({
+          memberId: charge.memberId,
+          memberNo: charge.member?.memberNo,
+          waivedAmount,
+          waiverReason: input.waiverReason,
+          authorizedBy: input.waivedBy,
+        }),
+      },
+    });
+
     return {
       success: true,
-      payment: updatedPayment,
-      reversal,
+      charge: updated,
+      waivedAmount,
     };
-  });
+  }, TX_OPTIONS);
 }
 
 export async function getDailyCollectionReport() {

@@ -20,9 +20,38 @@ export default function StaffReportsPage() {
   const [dateRange, setDateRange] = useState("October 2026");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  const handleExportCSV = () => {
+    const categoriesData = [
+      ["Category", "Loans", "Share %"],
+      ["History & Geography (900s)", "1732", "36%"],
+      ["Pure & Applied Sciences (500s/600s)", "1154", "24%"],
+      ["Literature & Fiction (800s)", "1010", "21%"],
+      ["Social Sciences (300s)", "577", "12%"],
+      ["Philosophy & Psychology (100s)", "339", "7%"],
+    ];
+
+    const titlesData = [
+      [],
+      ["Top Borrowed Titles", "Author", "Total Loans"],
+      ["The Discovery of India", "Jawaharlal Nehru", "94"],
+      ["Wings of Fire", "A. P. J. Abdul Kalam", "88"],
+      ["India After Gandhi", "Ramachandra Guha", "72"],
+      ["A Brief History of Time", "Stephen Hawking", "65"],
+      ["The God of Small Things", "Arundhati Roy", "59"],
+    ];
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [...categoriesData, ...titlesData].map((e) => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `District_Library_Audit_Report_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast("Comprehensive monthly audit dataset exported as CSV.");
   };
 
   return (
@@ -57,7 +86,7 @@ export default function StaffReportsPage() {
             <span>Print Report</span>
           </button>
           <button
-            onClick={() => showToast("Exporting comprehensive audit dataset as CSV.")}
+            onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-xs font-medium transition cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />

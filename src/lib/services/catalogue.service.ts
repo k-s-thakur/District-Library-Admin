@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import crypto from "crypto";
 
 export interface SearchCatalogParams {
   query?: string;
@@ -364,4 +365,462 @@ export async function getCategoriesWithCounts() {
     accentColor: c.accentColor || "teal",
     booksCount: c._count.books,
   }));
+}
+
+export interface CreateBookInput {
+  title: string;
+  isbn: string;
+  subtitle?: string;
+  edition?: string;
+  publicationYear?: number;
+  language?: string;
+  ddcCode?: string;
+  bookNumber?: string;
+  description?: string;
+  coverImageUrl?: string;
+  categoryId?: string;
+  publisherName?: string;
+  authors?: string[]; // author names
+  isFeatured?: boolean;
+}
+
+export interface UpdateBookInput {
+  title?: string;
+  subtitle?: string;
+  edition?: string;
+  publicationYear?: number;
+  language?: string;
+  ddcCode?: string;
+  bookNumber?: string;
+  description?: string;
+  coverImageUrl?: string;
+  categoryId?: string;
+  publisherName?: string;
+  authors?: string[];
+  isFeatured?: boolean;
+}
+
+export interface AddBookCopyInput {
+  bookId: string;
+  accessionNo?: string;
+  shelfLocation?: string;
+  acquisitionCost?: number;
+  condition?: "NEW" | "GOOD" | "FAIR" | "POOR";
+  status?: "AVAILABLE" | "REFERENCE_ONLY";
+}
+
+export interface UpdateBookCopyInput {
+  shelfLocation?: string;
+  acquisitionCost?: number;
+  condition?: "NEW" | "GOOD" | "FAIR" | "POOR";
+  status?: "AVAILABLE" | "REFERENCE_ONLY" | "DAMAGED" | "LOST" | "WITHDRAWN";
+}
+
+const TX_OPTIONS = { maxWait: 20000, timeout: 60000 };
+
+export async function createBook(input: CreateBookInput, actorId: string) {
+  const bookId = await prisma.$transaction(async (tx) => {
+    // 1. Verify unique ISBN
+    const existing = await tx.book.findUnique({ where: { isbn: input.isbn } });
+    if (existing) {
+      throw new Error(`A book with ISBN "${input.isbn}" already exists: "${existing.title}".`);
+    }
+
+    // 2. Handle publisher if provided
+    let publisherId: string | null = null;
+    if (input.publisherName && input.publisherName.trim()) {
+      const pubName = input.publisherName.trim();
+      let pub = await tx.publisher.findUnique({ where: { name: pubName } });
+      if (!pub) {
+        pub = await tx.publisher.create({ data: { name: pubName } });
+      }
+      publisherId = pub.id;
+    }
+
+    // 3. Create book
+    const book = await tx.book.create({
+      data: {
+        isbn: input.isbn.trim(),
+        title: input.title.trim(),
+        subtitle: input.subtitle?.trim() || null,
+        edition: input.edition?.trim() || null,
+        publicationYear: input.publicationYear ? Number(input.publicationYear) : null,
+        language: input.language || "Hindi/English",
+        ddcCode: input.ddcCode?.trim() || null,
+        bookNumber: input.bookNumber?.trim() || null,
+        description: input.description?.trim() || null,
+        coverImageUrl: input.coverImageUrl?.trim() || null,
+        categoryId: input.categoryId || null,
+        publisherId,
+        isFeatured: input.isFeatured ?? false,
+      },
+    });
+
+    // 4. Link authors
+    if (input.authors && input.authors.length > 0) {
+      for (const authorName of input.authors) {
+        const cleanName = authorName.trim();
+        if (!cleanName) continue;
+        let author = await tx.author.findUnique({ where: { name: cleanName } });
+        if (!author) {
+          author = await tx.author.create({ data: { name: cleanName } });
+        }
+        await tx.bookAuthor.create({
+          data: {
+            bookId: book.id,
+            authorId: author.id,
+          },
+        });
+      }
+    }
+
+    // 5. Audit log
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: "BOOK_CREATED",
+        entityType: "Book",
+        entityId: book.id,
+        metadataJson: JSON.stringify({ title: book.title, isbn: book.isbn }),
+      },
+    });
+
+    return book.id;
+  }, TX_OPTIONS);
+
+  return await getBookDetails(bookId);
+}
+
+export async function updateBook(id: string, input: UpdateBookInput, actorId: string) {
+  await prisma.$transaction(async (tx) => {
+    const book = await tx.book.findUnique({ where: { id } });
+    if (!book) throw new Error("Book not found.");
+
+    let publisherId = book.publisherId;
+    if (input.publisherName !== undefined) {
+      if (input.publisherName && input.publisherName.trim()) {
+        const pubName = input.publisherName.trim();
+        let pub = await tx.publisher.findUnique({ where: { name: pubName } });
+        if (!pub) {
+          pub = await tx.publisher.create({ data: { name: pubName } });
+        }
+        publisherId = pub.id;
+      } else {
+        publisherId = null;
+      }
+    }
+
+    await tx.book.update({
+      where: { id },
+      data: {
+        title: input.title !== undefined ? input.title.trim() : book.title,
+        subtitle: input.subtitle !== undefined ? input.subtitle?.trim() || null : book.subtitle,
+        edition: input.edition !== undefined ? input.edition?.trim() || null : book.edition,
+        publicationYear: input.publicationYear !== undefined ? input.publicationYear : book.publicationYear,
+        language: input.language !== undefined ? input.language : book.language,
+        ddcCode: input.ddcCode !== undefined ? input.ddcCode?.trim() || null : book.ddcCode,
+        bookNumber: input.bookNumber !== undefined ? input.bookNumber?.trim() || null : book.bookNumber,
+        description: input.description !== undefined ? input.description?.trim() || null : book.description,
+        coverImageUrl: input.coverImageUrl !== undefined ? input.coverImageUrl?.trim() || null : book.coverImageUrl,
+        categoryId: input.categoryId !== undefined ? input.categoryId : book.categoryId,
+        publisherId,
+        isFeatured: input.isFeatured !== undefined ? input.isFeatured : book.isFeatured,
+      },
+    });
+
+    // Update authors if supplied
+    if (input.authors !== undefined) {
+      await tx.bookAuthor.deleteMany({ where: { bookId: id } });
+      for (const authorName of input.authors) {
+        const cleanName = authorName.trim();
+        if (!cleanName) continue;
+        let author = await tx.author.findUnique({ where: { name: cleanName } });
+        if (!author) {
+          author = await tx.author.create({ data: { name: cleanName } });
+        }
+        await tx.bookAuthor.create({
+          data: {
+            bookId: id,
+            authorId: author.id,
+          },
+        });
+      }
+    }
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: "BOOK_UPDATED",
+        entityType: "Book",
+        entityId: id,
+        metadataJson: JSON.stringify({ title: input.title || book.title }),
+      },
+    });
+  }, TX_OPTIONS);
+
+  return await getBookDetails(id);
+}
+
+export async function deleteBook(id: string, actorId: string) {
+  return await prisma.$transaction(async (tx) => {
+    const book = await tx.book.findUnique({
+      where: { id },
+      include: {
+        copies: {
+          include: {
+            loans: { where: { status: "ACTIVE" } },
+          },
+        },
+      },
+    });
+
+    if (!book) throw new Error("Book not found.");
+
+    const activeLoans = book.copies.flatMap((c) => c.loans);
+    if (activeLoans.length > 0) {
+      throw new Error(`Cannot delete book: ${activeLoans.length} physical copies are currently on active loan.`);
+    }
+
+    const copyIds = book.copies.map((c) => c.id);
+    await tx.bookAuthor.deleteMany({ where: { bookId: id } });
+    await tx.reservation.deleteMany({ where: { bookId: id } });
+    await tx.feeCharge.deleteMany({ where: { loan: { copyId: { in: copyIds } } } });
+    await tx.loan.deleteMany({ where: { copyId: { in: copyIds } } });
+    await tx.bookCopy.deleteMany({ where: { bookId: id } });
+    await tx.book.delete({ where: { id } });
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: "BOOK_DELETED",
+        entityType: "Book",
+        entityId: id,
+        metadataJson: JSON.stringify({ title: book.title, isbn: book.isbn }),
+      },
+    });
+
+    return { success: true, title: book.title };
+  }, TX_OPTIONS);
+}
+
+export async function generateNextAccessionNo(year = new Date().getFullYear()): Promise<string> {
+  const prefix = `ACC-${year}-`;
+  const copies = await prisma.bookCopy.findMany({
+    where: { accessionNo: { startsWith: prefix } },
+    select: { accessionNo: true },
+  });
+
+  let maxNum = 0;
+  for (const c of copies) {
+    const parts = c.accessionNo.split("-");
+    const num = parseInt(parts[2], 10);
+    if (!isNaN(num) && num > maxNum) {
+      maxNum = num;
+    }
+  }
+
+  return `${prefix}${String(maxNum + 1).padStart(4, "0")}`;
+}
+
+export async function addBookCopy(input: AddBookCopyInput, actorId: string) {
+  return await prisma.$transaction(async (tx) => {
+    const book = await tx.book.findUnique({
+      where: { id: input.bookId },
+      include: { copies: true },
+    });
+    if (!book) throw new Error(`Book with ID "${input.bookId}" was not found.`);
+
+    // Determine accession number
+    let accessionNo = input.accessionNo?.trim();
+    if (!accessionNo) {
+      const year = new Date().getFullYear();
+      const prefix = `ACC-${year}-`;
+      const copies = await tx.bookCopy.findMany({
+        where: { accessionNo: { startsWith: prefix } },
+        select: { accessionNo: true },
+      });
+      let maxNum = 0;
+      for (const c of copies) {
+        const parts = c.accessionNo.split("-");
+        const num = parseInt(parts[2], 10);
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num;
+        }
+      }
+      accessionNo = `${prefix}${String(maxNum + 1).padStart(4, "0")}`;
+    } else {
+      const existing = await tx.bookCopy.findUnique({ where: { accessionNo } });
+      if (existing) {
+        throw new Error(`Accession number "${accessionNo}" already exists in the accession register.`);
+      }
+    }
+
+    const copyNumber = book.copies.length + 1;
+    const randomHex = crypto.randomBytes(4).toString("hex").toUpperCase();
+    const qrCodeToken = `QR-${accessionNo}-${randomHex}`;
+
+    const copy = await tx.bookCopy.create({
+      data: {
+        bookId: book.id,
+        accessionNo,
+        copyNumber,
+        qrCodeToken,
+        shelfLocation: input.shelfLocation?.trim() || "General Stacks",
+        acquisitionCost: input.acquisitionCost !== undefined ? Number(input.acquisitionCost) : 0,
+        condition: input.condition || "GOOD",
+        status: input.status || "AVAILABLE",
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: "COPY_ADDED",
+        entityType: "BookCopy",
+        entityId: copy.id,
+        metadataJson: JSON.stringify({
+          bookTitle: book.title,
+          accessionNo,
+          copyNumber,
+          shelfLocation: copy.shelfLocation,
+        }),
+      },
+    });
+
+    return copy;
+  }, TX_OPTIONS);
+}
+
+export async function updateBookCopy(copyId: string, input: UpdateBookCopyInput, actorId: string) {
+  return await prisma.$transaction(async (tx) => {
+    const copy = await tx.bookCopy.findUnique({
+      where: { id: copyId },
+      include: {
+        book: true,
+        loans: { where: { status: "ACTIVE" } },
+      },
+    });
+
+    if (!copy) throw new Error("Copy not found.");
+
+    if (input.status && ["LOST", "DAMAGED", "WITHDRAWN"].includes(input.status) && copy.loans.length > 0) {
+      throw new Error(`Cannot change status to "${input.status}" while copy is actively issued.`);
+    }
+
+    const updated = await tx.bookCopy.update({
+      where: { id: copyId },
+      data: {
+        shelfLocation: input.shelfLocation !== undefined ? input.shelfLocation.trim() : copy.shelfLocation,
+        acquisitionCost: input.acquisitionCost !== undefined ? Number(input.acquisitionCost) : copy.acquisitionCost,
+        condition: input.condition || copy.condition,
+        status: input.status || copy.status,
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        action: "COPY_UPDATED",
+        entityType: "BookCopy",
+        entityId: copy.id,
+        metadataJson: JSON.stringify({
+          accessionNo: copy.accessionNo,
+          oldStatus: copy.status,
+          newStatus: updated.status,
+          condition: updated.condition,
+        }),
+      },
+    });
+
+    return updated;
+  }, TX_OPTIONS);
+}
+
+export async function listAccessionRegister(params?: {
+  search?: string;
+  status?: string;
+  condition?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const page = Math.max(1, params?.page || 1);
+  const limit = Math.max(1, Math.min(100, params?.limit || 50));
+  const skip = (page - 1) * limit;
+
+  const where: any = {};
+  if (params?.status) where.status = params.status;
+  if (params?.condition) where.condition = params.condition;
+
+  if (params?.search && params.search.trim()) {
+    const s = params.search.trim();
+    where.OR = [
+      { accessionNo: { contains: s } },
+      { shelfLocation: { contains: s } },
+      { book: { title: { contains: s } } },
+      { book: { isbn: { contains: s } } },
+      { book: { ddcCode: { contains: s } } },
+      { book: { authors: { some: { author: { name: { contains: s } } } } } },
+    ];
+  }
+
+  const [totalCount, copies] = await Promise.all([
+    prisma.bookCopy.count({ where }),
+    prisma.bookCopy.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        book: {
+          include: {
+            authors: { include: { author: true } },
+            category: true,
+            publisher: true,
+          },
+        },
+        loans: {
+          where: { status: "ACTIVE" },
+          include: {
+            member: {
+              select: { id: true, memberNo: true, fullName: true, phone: true },
+            },
+          },
+        },
+      },
+      orderBy: { accessionNo: "asc" },
+    }),
+  ]);
+
+  return {
+    items: copies.map((c) => ({
+      id: c.id,
+      accessionNo: c.accessionNo,
+      copyNumber: c.copyNumber,
+      qrCodeToken: c.qrCodeToken,
+      shelfLocation: c.shelfLocation,
+      acquisitionCost: c.acquisitionCost,
+      acquisitionDate: c.acquisitionDate,
+      condition: c.condition,
+      status: c.status,
+      bookId: c.book.id,
+      title: c.book.title,
+      isbn: c.book.isbn,
+      ddcCode: c.book.ddcCode,
+      category: c.book.category?.name || "General",
+      authors: c.book.authors.map((a) => a.author.name).join(", "),
+      activeLoan: c.loans[0]
+        ? {
+            loanId: c.loans[0].id,
+            memberNo: c.loans[0].member.memberNo,
+            memberName: c.loans[0].member.fullName,
+            dueDate: c.loans[0].dueDate,
+          }
+        : null,
+    })),
+    pagination: {
+      total: totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
 }

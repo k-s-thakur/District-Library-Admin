@@ -5,25 +5,29 @@ export async function seedDatabase() {
   console.log("🌱 Seeding Smart Public Library database (library.db)...");
 
   // 1. Clean slate
-  await prisma.auditLog.deleteMany();
-  await prisma.paymentAllocation.deleteMany();
-  await prisma.paymentReversal.deleteMany();
-  await prisma.receipt.deleteMany();
-  await prisma.receiptSequence.deleteMany();
-  await prisma.memberSequence.deleteMany();
-  await prisma.payment.deleteMany();
-  await prisma.feeCharge.deleteMany();
-  await prisma.reservation.deleteMany();
-  await prisma.loan.deleteMany();
-  await prisma.bookCopy.deleteMany();
-  await prisma.bookAuthor.deleteMany();
-  await prisma.book.deleteMany();
-  await prisma.author.deleteMany();
-  await prisma.publisher.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.libraryPolicy.deleteMany();
-  await prisma.member.deleteMany();
-  await prisma.staffUser.deleteMany();
+  await prisma.$executeRawUnsafe(`
+    TRUNCATE TABLE 
+      "AuditLog",
+      "PaymentReversal",
+      "Receipt",
+      "ReceiptSequence",
+      "PaymentAllocation",
+      "Payment",
+      "FeeCharge",
+      "Reservation",
+      "Loan",
+      "BookCopy",
+      "BookAuthor",
+      "Book",
+      "Author",
+      "Publisher",
+      "Category",
+      "LibraryPolicy",
+      "MemberSequence",
+      "Member",
+      "StaffUser"
+    CASCADE;
+  `);
 
   // 2. Initialize Sequences
   await prisma.memberSequence.create({
@@ -225,20 +229,24 @@ export async function seedDatabase() {
   });
 
   // 7. Create Authors
-  const authors = await Promise.all([
-    prisma.author.create({ data: { name: "Dr. A. P. J. Abdul Kalam", biography: "Aerospace scientist and 11th President of India, recipient of the Bharat Ratna." } }),
-    prisma.author.create({ data: { name: "Munshi Premchand", biography: "Pioneering novelist of modern Hindi and Urdu literature known for social realism." } }),
-    prisma.author.create({ data: { name: "Dr. B. R. Ambedkar", biography: "Chief Architect of the Constitution of India, jurist, economist, and social reformer." } }),
-    prisma.author.create({ data: { name: "Rabindranath Tagore", biography: "Nobel laureate poet, polymath, composer, and creator of modern Indian literature." } }),
-    prisma.author.create({ data: { name: "R. K. Narayan", biography: "Leading figure of early Indian literature in English, creator of the fictional town of Malgudi." } }),
-    prisma.author.create({ data: { name: "Ruskin Bond", biography: "Eminent author of Indian children's literature and Himalayan memoirs." } }),
-    prisma.author.create({ data: { name: "Dr. Sudha Murty", biography: "Philanthropist, educator, and beloved author of inspiring short stories and fables." } }),
-    prisma.author.create({ data: { name: "Andrew S. Tanenbaum", biography: "Professor Emeritus of Computer Science and author of standard textbooks." } }),
-    prisma.author.create({ data: { name: "Dennis M. Ritchie", biography: "Creator of the C programming language and co-creator of Unix operating system." } }),
-    prisma.author.create({ data: { name: "Brian W. Kernighan", biography: "Computer scientist and co-author of the seminal C Programming manual." } }),
-    prisma.author.create({ data: { name: "Carl Sagan", biography: "Astronomer, astrophysicist, and author of scientific humanism classics." } }),
-    prisma.author.create({ data: { name: "Stephen Hawking", biography: "Theoretical physicist, cosmologist, and author of A Brief History of Time." } }),
-  ]);
+  const authorData = [
+    { name: "Dr. A. P. J. Abdul Kalam", biography: "Aerospace scientist and 11th President of India, recipient of the Bharat Ratna." },
+    { name: "Munshi Premchand", biography: "Pioneering novelist of modern Hindi and Urdu literature known for social realism." },
+    { name: "Dr. B. R. Ambedkar", biography: "Chief Architect of the Constitution of India, jurist, economist, and social reformer." },
+    { name: "Rabindranath Tagore", biography: "Nobel laureate poet, polymath, composer, and creator of modern Indian literature." },
+    { name: "R. K. Narayan", biography: "Leading figure of early Indian literature in English, creator of the fictional town of Malgudi." },
+    { name: "Ruskin Bond", biography: "Eminent author of Indian children's literature and Himalayan memoirs." },
+    { name: "Dr. Sudha Murty", biography: "Philanthropist, educator, and beloved author of inspiring short stories and fables." },
+    { name: "Andrew S. Tanenbaum", biography: "Professor Emeritus of Computer Science and author of standard textbooks." },
+    { name: "Dennis M. Ritchie", biography: "Creator of the C programming language and co-creator of Unix operating system." },
+    { name: "Brian W. Kernighan", biography: "Computer scientist and co-author of the seminal C Programming manual." },
+    { name: "Carl Sagan", biography: "Astronomer, astrophysicist, and author of scientific humanism classics." },
+    { name: "Stephen Hawking", biography: "Theoretical physicist, cosmologist, and author of A Brief History of Time." },
+  ];
+  const authors: any[] = [];
+  for (const a of authorData) {
+    authors.push(await prisma.author.create({ data: a }));
+  }
 
   const [
     autKalam,
@@ -548,17 +556,13 @@ export async function seedDatabase() {
             status: c.status,
           })),
         },
+        authors: {
+          create: b.authorIds.map((authorId) => ({
+            author: { connect: { id: authorId } },
+          })),
+        },
       },
     });
-
-    for (const authorId of b.authorIds) {
-      await prisma.bookAuthor.create({
-        data: {
-          bookId: book.id,
-          authorId,
-        },
-      });
-    }
   }
 
   // 9. Create Members

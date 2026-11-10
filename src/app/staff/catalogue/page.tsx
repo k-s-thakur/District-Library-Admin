@@ -124,13 +124,19 @@ const sampleCatalogue: CatalogueItem[] = [
 
 export default function StaffCataloguePage() {
   const { previewData } = useStaff();
-  const [items, setItems] = useState<CatalogueItem[]>(sampleCatalogue);
+  const [items, setItems] = useState<CatalogueItem[]>([]);
+  const [metrics, setMetrics] = useState({
+    totalTitles: 0,
+    totalCopies: 0,
+    availableCopies: 0,
+  });
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
+  const pageSize = 8;
 
   // Modals state
   const [addBookModalOpen, setAddBookModalOpen] = useState(false);
@@ -156,6 +162,53 @@ export default function StaffCataloguePage() {
 
   const filterRef = useRef<HTMLDivElement>(null);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/catalog/copies?limit=100");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.items) {
+          setItems(
+            data.items.map((c: any) => ({
+              id: c.id,
+              title: c.title,
+              author: c.authors || "Unknown",
+              accessionNo: c.accessionNo,
+              category: c.category || "General",
+              shelfDdc: `${c.ddcCode || "000"} • ${c.shelfLocation || "General Stacks"}`,
+              status: c.status === "AVAILABLE" ? "Available" : c.status === "ISSUED" ? "Issued" : "On hold",
+              isbn: c.isbn,
+              copiesCount: 1,
+              year: 2026,
+            }))
+          );
+        }
+      }
+      const bookRes = await fetch("/api/catalog/books?limit=100");
+      if (bookRes.ok) {
+        const bookData = await bookRes.json();
+        if (bookData.items) {
+          const totalCopies = bookData.items.reduce((acc: number, b: any) => acc + (b.totalCopies || 0), 0);
+          const availableCopies = bookData.items.reduce((acc: number, b: any) => acc + (b.availableCopies || 0), 0);
+          setMetrics({
+            totalTitles: bookData.pagination?.total || bookData.items.length,
+            totalCopies,
+            availableCopies,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load catalog records", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
@@ -168,7 +221,7 @@ export default function StaffCataloguePage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 3500);
   };
 
   const filteredItems = useMemo(() => {
@@ -193,30 +246,52 @@ export default function StaffCataloguePage() {
   const handleAddBook = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    try {
+      const bookRes = await fetch("/api/catalog/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          subtitle: newSubtitle.trim() || undefined,
+          isbn: newIsbn.trim() || `978-93-${Date.now().toString().slice(-8)}`,
+          language: "Hindi/English",
+          ddcCode: newDdc.trim() || undefined,
+          bookNumber: newCutter.trim() || undefined,
+          publicationYear: Number(newPubYear) || 2026,
+          edition: newEdition.trim() || undefined,
+          authors: newAuthor ? [newAuthor.trim()] : [],
+        }),
+      });
+      const bookData = await bookRes.json();
+      if (!bookRes.ok) {
+        throw new Error(bookData.error || "Failed to create book");
+      }
 
-    const generatedAcc = `ACC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const shelfCode = `${newCategory.slice(0, 3).toUpperCase()} - ${newDdc} ${newAuthor.slice(0, 3).toUpperCase()}`;
+      const count = Math.max(1, Number(newCopies) || 1);
+      for (let i = 0; i < count; i++) {
+        await fetch("/api/catalog/copies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookId: bookData.book.id,
+            shelfLocation: newShelf || "General Stacks",
+            condition: "NEW",
+            status: "AVAILABLE",
+          }),
+        });
+      }
 
-    const newItem: CatalogueItem = {
-      id: `cat-${Date.now()}`,
-      title: newTitle.trim(),
-      author: newAuthor.trim(),
-      accessionNo: generatedAcc,
-      category: newCategory,
-      shelfDdc: shelfCode,
-      status: "Available",
-      copiesCount: Number(newCopies),
-      year: Number(newPubYear) || 2026,
-      isbn: newIsbn || "978-81-000000-0",
-    };
-
-    setItems((prev) => [newItem, ...prev]);
-    setIsSubmitting(false);
-    setAddBookModalOpen(false);
-    setNewTitle("");
-    setNewAuthor("");
-    setNewIsbn("");
-    showToast(`Accessioned "${newItem.title}" with code ${newItem.accessionNo}`);
+      showToast(`Book "${newTitle}" and ${count} physical cop${count > 1 ? "ies" : "y"} accessioned!`);
+      setAddBookModalOpen(false);
+      setNewTitle("");
+      setNewAuthor("");
+      setNewIsbn("");
+      await loadData();
+    } catch (err: any) {
+      showToast(`Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -294,7 +369,9 @@ export default function StaffCataloguePage() {
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">8,426</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {metrics.totalTitles || items.length}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Total Titles</div>
           </div>
         </div>
@@ -304,7 +381,9 @@ export default function StaffCataloguePage() {
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">12,680</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {metrics.totalCopies || items.length}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Physical Copies</div>
           </div>
         </div>
@@ -314,7 +393,9 @@ export default function StaffCataloguePage() {
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-[#0d7a55] tabular-nums leading-tight">7,354</div>
+            <div className="text-2xl font-bold text-[#0d7a55] tabular-nums leading-tight">
+              {metrics.availableCopies || items.filter((i) => i.status === "Available").length}
+            </div>
             <div className="text-xs text-slate-500 mt-0.5">Available on Shelves</div>
           </div>
         </div>
@@ -324,8 +405,10 @@ export default function StaffCataloguePage() {
             <Plus className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">24</div>
-            <div className="text-xs text-slate-500 mt-0.5">Recently Added</div>
+            <div className="text-2xl font-bold text-slate-900 tabular-nums leading-tight">
+              {items.length}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">Accession Records</div>
           </div>
         </div>
       </div>

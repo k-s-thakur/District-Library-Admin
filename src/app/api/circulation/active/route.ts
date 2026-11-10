@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
+    const search = searchParams.get("search");
 
     // Privacy protection: Regular member can only see their own active loans
     const isStaff = ["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN", "ACCOUNTS_OPERATOR"].includes(session.role);
@@ -25,6 +26,16 @@ export async function GET(req: NextRequest) {
       where.memberId = session.memberId;
     } else if (memberId) {
       where.memberId = memberId;
+    }
+
+    if (search && search.trim()) {
+      const s = search.trim();
+      where.OR = [
+        { member: { fullName: { contains: s } } },
+        { member: { memberNo: { contains: s } } },
+        { copy: { accessionNo: { contains: s } } },
+        { copy: { book: { title: { contains: s } } } },
+      ];
     }
 
     const loans = await prisma.loan.findMany({
