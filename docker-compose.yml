@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  district-library-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: district-library-admin
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+    networks:
+      - library-net
+
+  district-library-opac:
+    build:
+      context: ../District-Library-OPAC
+      dockerfile: Dockerfile
+    container_name: district-library-opac
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NEXT_PUBLIC_ADMIN_API_URL=http://district-library-admin:3001
+      - NODE_ENV=production
+    depends_on:
+      - district-library-admin
+    networks:
+      - library-net
+
+networks:
+  library-net:
+    driver: bridge
