@@ -21,6 +21,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
+import QRCodeSVG from "@/components/QRCodeSVG";
+import BarcodeSVG from "@/components/BarcodeSVG";
 
 interface CatalogueItem {
   id: string;
@@ -728,11 +730,11 @@ export default function StaffCataloguePage() {
               </button>
             </div>
 
-            <div className="p-3 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-center font-mono space-y-1">
-              <div className="text-[10px] text-slate-400 uppercase">District Library</div>
-              <div className="text-sm font-bold text-slate-900">{selectedSpineLabel.shelfDdc}</div>
-              <div className="text-xs text-slate-600">{selectedSpineLabel.accessionNo}</div>
-              <div className="text-[9px] text-slate-400">Copy #1 of {selectedSpineLabel.copiesCount}</div>
+            <div className="p-3 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50 text-center font-mono space-y-2">
+              <div className="text-[10px] text-slate-400 uppercase tracking-widest font-sans font-semibold">Government Public Library</div>
+              <div className="text-base font-bold text-slate-900 bg-white py-1 rounded border border-slate-200">{selectedSpineLabel.shelfDdc}</div>
+              <BarcodeSVG value={selectedSpineLabel.accessionNo} width={160} height={38} showText={true} />
+              <div className="text-[9px] text-slate-500 font-sans truncate">{selectedSpineLabel.title}</div>
             </div>
 
             <button
@@ -740,7 +742,7 @@ export default function StaffCataloguePage() {
               className="w-full py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-full font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Label</span>
+              <span>Print Spine Label</span>
             </button>
           </div>
         </div>
@@ -751,18 +753,22 @@ export default function StaffCataloguePage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xs w-full p-5 space-y-3 text-xs">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <span className="font-bold text-slate-900">Accession Barcode</span>
+              <span className="font-bold text-slate-900">Accession QR & Barcode</span>
               <button onClick={() => setSelectedQrLabel(null)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 border border-slate-200 rounded-xl bg-white text-center space-y-2">
-              <div className="w-20 h-20 mx-auto bg-slate-900 text-white rounded-lg flex items-center justify-center font-mono text-[9px] p-2">
-                [QR CODE TOKEN]
+            <div className="p-4 border border-slate-200 rounded-xl bg-white text-center space-y-3 shadow-xs">
+              <div className="flex justify-center">
+                <QRCodeSVG value={`QR-${selectedQrLabel.accessionNo}`} size={110} />
               </div>
-              <div className="font-mono font-bold text-sm text-slate-900">{selectedQrLabel.accessionNo}</div>
-              <div className="text-[11px] text-slate-500 truncate">{selectedQrLabel.title}</div>
+              <BarcodeSVG value={selectedQrLabel.accessionNo} width={170} height={42} showText={false} />
+              <div>
+                <div className="font-mono font-bold text-sm text-slate-900">{selectedQrLabel.accessionNo}</div>
+                <div className="text-[11px] text-slate-500 truncate mt-0.5">{selectedQrLabel.title}</div>
+                <div className="text-[10px] text-teal-700 font-medium">{selectedQrLabel.shelfDdc}</div>
+              </div>
             </div>
 
             <button
@@ -770,7 +776,7 @@ export default function StaffCataloguePage() {
               className="w-full py-2 bg-[#0d7a55] hover:bg-[#0a6344] text-white rounded-full font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Barcode</span>
+              <span>Print Sticker Label</span>
             </button>
           </div>
         </div>

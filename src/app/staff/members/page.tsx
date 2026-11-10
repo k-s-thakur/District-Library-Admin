@@ -25,6 +25,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
+import QRCodeSVG from "@/components/QRCodeSVG";
+import BarcodeSVG from "@/components/BarcodeSVG";
 
 interface MemberRecord {
   id: string;
@@ -814,7 +816,7 @@ export default function StaffMembersPage() {
                 </div>
               </div>
 
-              <div className="flex items-end justify-between pt-2 border-t border-emerald-900/80 text-[10px]">
+              <div className="flex items-center justify-between pt-2 border-t border-emerald-900/80 text-[10px]">
                 <div>
                   <span className="text-emerald-300/70 block">Category</span>
                   <span className="font-semibold text-white">{selectedCardMember.category}</span>
@@ -823,11 +825,13 @@ export default function StaffMembersPage() {
                   <span className="text-emerald-300/70 block">Status</span>
                   <span className="font-semibold text-[#7cdcb5]">{selectedCardMember.status}</span>
                 </div>
-                <div className="w-9 h-9 bg-white p-1 rounded-lg">
-                  <div className="w-full h-full bg-slate-900 rounded-xs flex items-center justify-center text-[7px] text-white font-mono">
-                    QR
-                  </div>
+                <div className="w-12 h-12 bg-white p-1 rounded-lg shadow-sm flex items-center justify-center">
+                  <QRCodeSVG value={`MEMBER-${selectedCardMember.memberNo}`} size={42} />
                 </div>
+              </div>
+
+              <div className="pt-2 flex justify-center">
+                <BarcodeSVG value={selectedCardMember.memberNo} width={220} height={34} showText={false} className="rounded" />
               </div>
             </div>
 
