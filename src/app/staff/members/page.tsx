@@ -41,72 +41,11 @@ interface MemberRecord {
   outstandingDues?: number;
 }
 
-const sampleMembers: MemberRecord[] = [
-  {
-    id: "m-1",
-    name: "Aranya Sharma",
-    subtitle: "Member record - sample",
-    memberNo: "MBR-2024-0185",
-    category: "Adult",
-    nextDueDate: "24 Oct 2026",
-    status: "Active",
-    email: "aranya.sharma@example.com",
-    phone: "+91 98110 23451",
-    address: "Block C, Vasant Kunj, New Delhi",
-  },
-  {
-    id: "m-2",
-    name: "Rahul Verma",
-    subtitle: "Member record - sample",
-    memberNo: "MBR-2023-0984",
-    category: "Student",
-    nextDueDate: "21 Oct 2026",
-    status: "Active",
-    email: "rahul.verma@example.com",
-    phone: "+91 98711 54321",
-    address: "D-42, Hauz Khas, New Delhi",
-  },
-  {
-    id: "m-3",
-    name: "Meera Nair",
-    subtitle: "Member record - sample",
-    memberNo: "MBR-2025-0271",
-    category: "Adult",
-    nextDueDate: "—",
-    status: "Active",
-    email: "meera.nair@example.com",
-    phone: "+91 99100 88214",
-    address: "Mayur Vihar Phase 1, Delhi",
-  },
-  {
-    id: "m-4",
-    name: "Kabir Singh",
-    subtitle: "Member record - sample",
-    memberNo: "MBR-2022-0455",
-    category: "Senior",
-    nextDueDate: "18 Oct 2026",
-    status: "Expired",
-    email: "kabir.singh@example.com",
-    phone: "+91 98101 77332",
-    address: "Greater Kailash II, New Delhi",
-  },
-  {
-    id: "m-5",
-    name: "Ananya Iyer",
-    subtitle: "Member record - sample",
-    memberNo: "MBR-2024-0312",
-    category: "Student",
-    nextDueDate: "28 Oct 2026",
-    status: "Active",
-    email: "ananya.iyer@example.com",
-    phone: "+91 98188 99112",
-    address: "Chanakyapuri, New Delhi",
-  },
-];
+const sampleMembers: MemberRecord[] = [];
 
 export default function StaffMembersPage() {
   const { previewData } = useStaff();
-  const [membersList, setMembersList] = useState<MemberRecord[]>(sampleMembers);
+  const [membersList, setMembersList] = useState<MemberRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
