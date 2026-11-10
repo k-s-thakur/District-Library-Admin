@@ -597,3 +597,144 @@ export async function reserveBook(params: ReserveBookParams) {
     };
   }, TX_OPTIONS);
 }
+
+export interface DispatchReminderParams {
+  loanId: string;
+  actorId: string;
+}
+
+export async function dispatchLoanReminder(params: DispatchReminderParams) {
+  const loan = await prisma.loan.findUnique({
+    where: { id: params.loanId },
+    include: {
+      member: true,
+      copy: {
+        include: {
+          book: true,
+        },
+      },
+    },
+  });
+
+  if (!loan) {
+    throw new Error(`Loan with ID "${params.loanId}" not found.`);
+  }
+
+  if (loan.status !== "ACTIVE") {
+    throw new Error(`Loan is not active (current status: ${loan.status}).`);
+  }
+
+  const now = new Date();
+  const dueDate = new Date(loan.dueDate);
+  const diffTime = now.getTime() - dueDate.getTime();
+  const daysOverdue = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const isOverdue = daysOverdue > 0;
+
+  const noticeType = isOverdue ? "OVERDUE_NOTICE" : "DUE_SOON_REMINDER";
+  const messageBody = isOverdue
+    ? `Dear ${loan.member.fullName}, your borrowed book "${loan.copy.book.title}" (Accession: ${loan.copy.accessionNo}) was due on ${dueDate.toLocaleDateString("en-IN")}. It is overdue by ${daysOverdue} day(s). Please return it immediately to avoid accumulating fines.`
+    : `Dear ${loan.member.fullName}, this is a gentle reminder that your borrowed book "${loan.copy.book.title}" (Accession: ${loan.copy.accessionNo}) is due on ${dueDate.toLocaleDateString("en-IN")}. Please return or renew it on time.`;
+
+  // Log in Audit Trail
+  const audit = await prisma.auditLog.create({
+    data: {
+      actorId: params.actorId,
+      action: "CIRCULATION_REMINDER_SENT",
+      entityType: "Loan",
+      entityId: loan.id,
+      metadataJson: JSON.stringify({
+        noticeType,
+        recipient: {
+          memberNo: loan.member.memberNo,
+          name: loan.member.fullName,
+          phone: loan.member.phone,
+          email: loan.member.email,
+        },
+        book: {
+          title: loan.copy.book.title,
+          accessionNo: loan.copy.accessionNo,
+        },
+        dueDate: loan.dueDate.toISOString(),
+        daysOverdue: Math.max(0, daysOverdue),
+        messagePreview: messageBody,
+        dispatchedAt: now.toISOString(),
+      }),
+    },
+  });
+
+  return {
+    success: true,
+    loanId: loan.id,
+    member: loan.member.fullName,
+    memberNo: loan.member.memberNo,
+    bookTitle: loan.copy.book.title,
+    noticeType,
+    phone: loan.member.phone,
+    email: loan.member.email,
+    dispatchedAt: now.toISOString(),
+    auditLogId: audit.id,
+  };
+}
+
+export async function dispatchBulkReminders(actorId: string, loanIds?: string[]) {
+  let targetLoans: any[] = [];
+
+  if (loanIds && loanIds.length > 0) {
+    targetLoans = await prisma.loan.findMany({
+      where: {
+        id: { in: loanIds },
+        status: "ACTIVE",
+      },
+      include: {
+        member: true,
+        copy: {
+          include: {
+            book: true,
+          },
+        },
+      },
+    });
+  } else {
+    // Overdue or due within next 2 days
+    const twoDaysAhead = new Date();
+    twoDaysAhead.setDate(twoDaysAhead.getDate() + 2);
+    twoDaysAhead.setHours(23, 59, 59, 999);
+
+    targetLoans = await prisma.loan.findMany({
+      where: {
+        status: "ACTIVE",
+        dueDate: {
+          lte: twoDaysAhead,
+        },
+      },
+      include: {
+        member: true,
+        copy: {
+          include: {
+            book: true,
+          },
+        },
+      },
+    });
+  }
+
+  const results = [];
+  for (const loan of targetLoans) {
+    try {
+      const res = await dispatchLoanReminder({
+        loanId: loan.id,
+        actorId,
+      });
+      results.push(res);
+    } catch (e: any) {
+      console.error(`Error sending reminder for loan ${loan.id}:`, e.message);
+    }
+  }
+
+  return {
+    success: true,
+    totalDispatched: results.length,
+    dispatchedItems: results,
+  };
+}
+

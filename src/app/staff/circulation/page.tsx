@@ -17,6 +17,7 @@ import {
   Calendar,
   ArrowLeftRight,
   HelpCircle,
+  Bell,
 } from "lucide-react";
 
 interface FollowUpItem {
@@ -93,6 +94,10 @@ export default function StaffCirculationPage() {
   // Scan simulation state
   const [scanCode, setScanCode] = useState("");
   const [isLookingUpScan, setIsLookingUpScan] = useState(false);
+
+  // Reminders state
+  const [isSendingBulkReminders, setIsSendingBulkReminders] = useState(false);
+  const [remindingLoanId, setRemindingLoanId] = useState<string | null>(null);
 
   const handleScanLookup = async (code: string) => {
     if (!code.trim()) return;
@@ -214,11 +219,52 @@ export default function StaffCirculationPage() {
     loadData();
   }, []);
 
-  const handleRemind = (id: string, member: string) => {
-    setFollowUps((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, reminded: true } : item))
-    );
-    showToast(`Reminder notice dispatched to ${member} via SMS & Email.`);
+  const handleRemind = async (id: string, member: string) => {
+    setRemindingLoanId(id);
+    try {
+      const res = await fetch("/api/circulation/remind", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loanId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to dispatch reminder notice");
+      }
+      setFollowUps((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, reminded: true } : item))
+      );
+      showToast(`Reminder notice dispatched to ${member} via SMS & Email.`);
+    } catch (err: any) {
+      showToast(`Notice error: ${err.message}`);
+    } finally {
+      setRemindingLoanId(null);
+    }
+  };
+
+  const handleBulkRemind = async () => {
+    if (followUps.length === 0) {
+      showToast("No active loans pending follow-up.");
+      return;
+    }
+    setIsSendingBulkReminders(true);
+    try {
+      const res = await fetch("/api/circulation/remind", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bulk: true, loanIds: followUps.map((f) => f.id) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to dispatch bulk reminders");
+      }
+      setFollowUps((prev) => prev.map((item) => ({ ...item, reminded: true })));
+      showToast(`Dispatched notices to ${data.totalDispatched || followUps.length} borrowers via SMS & Email.`);
+    } catch (err: any) {
+      showToast(`Bulk notice error: ${err.message}`);
+    } finally {
+      setIsSendingBulkReminders(false);
+    }
   };
 
   const handleRenewLoan = async (id: string) => {
@@ -475,13 +521,24 @@ export default function StaffCirculationPage() {
                 Due dates & follow-ups
               </h3>
             </div>
-            <button
-              onClick={handleExportRegister}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold self-start sm:self-auto transition shadow-xs cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Export register</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                onClick={handleBulkRemind}
+                disabled={isSendingBulkReminders || followUps.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#e2f6ee] hover:bg-[#d0f0e2] text-[#0d7a55] border border-[#a7e4ca] text-xs font-semibold transition shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Send SMS and Email reminders to all members with due or overdue loans"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                <span>{isSendingBulkReminders ? "Dispatching..." : "Send All Due Reminders"}</span>
+              </button>
+              <button
+                onClick={handleExportRegister}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition shadow-xs cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 text-slate-500" />
+                <span>Export register</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -541,13 +598,14 @@ export default function StaffCirculationPage() {
                     <td className="py-3.5 px-5 text-right">
                       <button
                         onClick={() => handleRemind(item.id, item.member)}
+                        disabled={remindingLoanId === item.id}
                         className={`px-4 py-1 rounded-full text-xs font-semibold border transition cursor-pointer shadow-xs ${
                           item.reminded
                             ? "bg-emerald-50 text-[#0d7a55] border-emerald-300"
                             : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                         }`}
                       >
-                        {item.reminded ? "Reminded ✓" : "Remind"}
+                        {remindingLoanId === item.id ? "Sending..." : item.reminded ? "Reminded ✓" : "Remind"}
                       </button>
                     </td>
                   </tr>
