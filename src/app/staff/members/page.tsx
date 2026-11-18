@@ -735,11 +735,11 @@ export default function StaffMembersPage() {
                   onChange={(e) => setNewCategory(e.target.value as any)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
                 >
-                  <option value="Adult">Adult Citizen (3 titles · 14 days quota)</option>
-                  <option value="Student">Student (4 titles · 21 days quota)</option>
-                  <option value="Senior">Senior Citizen (5 titles · 30 days · zero fine)</option>
-                  <option value="Researcher">Researcher (8 titles · 30 days quota)</option>
-                  <option value="Govt Staff">Government Staff (5 titles · 21 days quota)</option>
+                  <option value="Adult">Adult Citizen</option>
+                  <option value="Student">Student</option>
+                  <option value="Senior">Senior Citizen</option>
+                  <option value="Researcher">Researcher</option>
+                  <option value="Govt Staff">Government Staff</option>
                 </select>
               </div>
 
