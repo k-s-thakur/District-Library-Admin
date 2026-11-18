@@ -478,3 +478,108 @@ export async function getDailyCollectionReport() {
     payments,
   };
 }
+
+export interface UpdatePaymentInput {
+  paymentId: string;
+  amount?: number;
+  paymentMethod?: "CASH" | "MANUAL_CHALLAN" | "DEMAND_DRAFT" | "OTHER_APPROVED";
+  description?: string;
+  referenceNumber?: string;
+  actorId: string;
+}
+
+export async function updatePayment(input: UpdatePaymentInput) {
+  return await prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findUnique({
+      where: { id: input.paymentId },
+      include: {
+        receipt: true,
+        allocations: {
+          include: { charge: true },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new Error(`Payment with ID "${input.paymentId}" not found`);
+    }
+
+    const dataToUpdate: any = {};
+    if (input.paymentMethod) {
+      dataToUpdate.paymentMethod = input.paymentMethod;
+    }
+    if (input.referenceNumber !== undefined) {
+      dataToUpdate.referenceNumber = input.referenceNumber;
+    }
+
+    // If amount is updated
+    if (input.amount !== undefined && input.amount > 0 && input.amount !== payment.amount) {
+      const diff = input.amount - payment.amount;
+      dataToUpdate.amount = input.amount;
+
+      // Update receipt total amount
+      if (payment.receipt) {
+        await tx.receipt.update({
+          where: { id: payment.receipt.id },
+          data: { totalAmount: input.amount },
+        });
+      }
+
+      // Update allocation and charge
+      if (payment.allocations && payment.allocations.length > 0) {
+        const firstAlloc = payment.allocations[0];
+        await tx.paymentAllocation.update({
+          where: { id: firstAlloc.id },
+          data: { amount: input.amount },
+        });
+
+        if (firstAlloc.charge) {
+          const newPaid = Math.max(0, firstAlloc.charge.paidAmount + diff);
+          const newBal = Math.max(0, firstAlloc.charge.amount - newPaid);
+          await tx.feeCharge.update({
+            where: { id: firstAlloc.charge.id },
+            data: {
+              paidAmount: newPaid,
+              balance: newBal,
+              status: newBal <= 0 ? "PAID" : "PARTIALLY_PAID",
+              description: input.description !== undefined ? input.description : firstAlloc.charge.description,
+            },
+          });
+        }
+      }
+    } else if (input.description !== undefined && payment.allocations && payment.allocations.length > 0) {
+      const firstAlloc = payment.allocations[0];
+      if (firstAlloc.charge) {
+        await tx.feeCharge.update({
+          where: { id: firstAlloc.charge.id },
+          data: { description: input.description },
+        });
+      }
+    }
+
+    const updatedPayment = await tx.payment.update({
+      where: { id: payment.id },
+      data: dataToUpdate,
+      include: {
+        receipt: true,
+        member: { select: { fullName: true, memberNo: true } },
+        allocations: { include: { charge: true } },
+      },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId: input.actorId,
+        action: "PAYMENT_UPDATED",
+        entityType: "Payment",
+        entityId: payment.id,
+        metadataJson: JSON.stringify({
+          updatedFields: input,
+          receiptNo: payment.receipt?.receiptNo,
+        }),
+      },
+    });
+
+    return updatedPayment;
+  }, TX_OPTIONS);
+}

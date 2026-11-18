@@ -22,6 +22,7 @@ import {
   Check,
   AlertCircle,
   RefreshCw,
+  Pencil,
 } from "lucide-react";
 
 interface PaymentReceipt {
@@ -72,6 +73,14 @@ export default function StaffFinancePage() {
   const [waiveModalCharge, setWaiveModalCharge] = useState<OutstandingCharge | null>(null);
   const [waiverReason, setWaiverReason] = useState("");
   const [isSubmittingWaiver, setIsSubmittingWaiver] = useState(false);
+
+  // Edit Receipt Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editReceipt, setEditReceipt] = useState<PaymentReceipt | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editMethod, setEditMethod] = useState<"Cash" | "UPI" | "Card" | "Manual">("Cash");
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   // Record Payment Form State
   const [payMember, setPayMember] = useState("");
@@ -315,6 +324,53 @@ export default function StaffFinancePage() {
       showToast(err.message || "Waiver failed", true);
     } finally {
       setIsSubmittingWaiver(false);
+    }
+  };
+
+  const handleOpenEdit = (rcp: PaymentReceipt) => {
+    setEditReceipt(rcp);
+    setEditAmount(rcp.amount.toString());
+    setEditDescription(rcp.description);
+    setEditMethod(rcp.method);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editReceipt) return;
+    setIsSubmittingEdit(true);
+
+    const methodMap: Record<string, string> = {
+      Cash: "CASH",
+      Manual: "MANUAL_CHALLAN",
+      Card: "DEMAND_DRAFT",
+      UPI: "OTHER_APPROVED",
+    };
+
+    try {
+      const res = await fetch(`/api/finance/payments/${editReceipt.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseFloat(editAmount),
+          paymentMethod: methodMap[editMethod] || "CASH",
+          description: editDescription.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update payment");
+      }
+
+      showToast(`Receipt #${editReceipt.receiptNo} updated successfully!`);
+      setEditModalOpen(false);
+      setEditReceipt(null);
+      await loadFinanceData();
+    } catch (err: any) {
+      showToast(err.message || "Failed to update receipt", true);
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -592,7 +648,7 @@ export default function StaffFinancePage() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-5 text-right space-x-1.5">
+                      <td className="py-3.5 px-5 text-right space-x-1.5 whitespace-nowrap">
                         <button
                           onClick={() => setSelectedReceiptPrint(rcp)}
                           className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 inline-flex items-center gap-1 transition cursor-pointer"
@@ -601,6 +657,17 @@ export default function StaffFinancePage() {
                           <Printer className="w-3.5 h-3.5" />
                           <span className="hidden sm:inline text-xs font-medium">Slip</span>
                         </button>
+
+                        {rcp.status === "Paid" && (
+                          <button
+                            onClick={() => handleOpenEdit(rcp)}
+                            className="p-1.5 rounded-lg border border-blue-200 bg-blue-50/60 text-blue-700 hover:bg-blue-100 inline-flex items-center gap-1 transition cursor-pointer"
+                            title="Edit receipt details"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                            <span className="hidden sm:inline text-xs font-medium">Edit</span>
+                          </button>
+                        )}
 
                         {rcp.status === "Paid" && (
                           <button
@@ -975,6 +1042,114 @@ export default function StaffFinancePage() {
                 <span>Print Physical Slip</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT RECEIPT MODAL */}
+      {editModalOpen && editReceipt && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Edit Receipt</h3>
+                  <p className="text-[11px] font-mono text-slate-500">{editReceipt.receiptNo}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditReceipt(null);
+                }}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Member:</span>
+                <span className="font-semibold text-slate-800">{editReceipt.member}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Date Issued:</span>
+                <span className="text-slate-700">{editReceipt.date}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    value={editAmount}
+                    onChange={(e) => setEditAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Payment Method *
+                  </label>
+                  <select
+                    value={editMethod}
+                    onChange={(e) => setEditMethod(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
+                  >
+                    <option value="Cash">Cash (Counter)</option>
+                    <option value="UPI">UPI / QR Code</option>
+                    <option value="Card">Debit/Credit Card</option>
+                    <option value="Manual">Manual Challan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-medium mb-1">
+                  Description / Particulars *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Overdue fine, Lost book recovery"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    setEditReceipt(null);
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdit}
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium cursor-pointer shadow-xs disabled:opacity-50 inline-flex items-center gap-1.5"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>{isSubmittingEdit ? "Saving..." : "Save Changes"}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
