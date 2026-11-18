@@ -4,9 +4,24 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
-    const policies = await prisma.policy.findMany({
+    const rawPolicies = await prisma.libraryPolicy.findMany({
       orderBy: { category: "asc" },
     });
+    // Map to normalized shape for UI
+    const policies = rawPolicies.map((p) => ({
+      id: p.id,
+      category: p.category,
+      loanPeriodDays: p.loanDurationDays,
+      loanDurationDays: p.loanDurationDays,
+      finePerDay: p.fineRatePerDay,
+      fineRatePerDay: p.fineRatePerDay,
+      gracePeriodDays: p.gracePeriodDays,
+      maxRenewals: p.renewalLimit,
+      renewalLimit: p.renewalLimit,
+      maxBooksAllowed: p.maxBooks,
+      maxBooks: p.maxBooks,
+      maxFine: p.maxFine,
+    }));
     return NextResponse.json({ policies });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -32,40 +47,41 @@ export async function PUT(req: NextRequest) {
 
     const updatedPolicies = await prisma.$transaction(
       policies.map((p: any) =>
-        prisma.policy.upsert({
+        prisma.libraryPolicy.upsert({
           where: { category: p.category },
           update: {
-            loanPeriodDays: p.loanPeriodDays !== undefined ? Number(p.loanPeriodDays) : undefined,
-            maxRenewals: p.maxRenewals !== undefined ? Number(p.maxRenewals) : undefined,
-            finePerDay: p.finePerDay !== undefined ? Number(p.finePerDay) : undefined,
+            loanDurationDays: p.loanPeriodDays !== undefined ? Number(p.loanPeriodDays) : (p.loanDurationDays !== undefined ? Number(p.loanDurationDays) : undefined),
+            renewalLimit: p.maxRenewals !== undefined ? Number(p.maxRenewals) : (p.renewalLimit !== undefined ? Number(p.renewalLimit) : undefined),
+            fineRatePerDay: p.finePerDay !== undefined ? Number(p.finePerDay) : (p.fineRatePerDay !== undefined ? Number(p.fineRatePerDay) : undefined),
             gracePeriodDays: p.gracePeriodDays !== undefined ? Number(p.gracePeriodDays) : undefined,
-            maxBooksAllowed: p.maxBooksAllowed !== undefined ? Number(p.maxBooksAllowed) : undefined,
+            maxBooks: p.maxBooksAllowed !== undefined ? Number(p.maxBooksAllowed) : (p.maxBooks !== undefined ? Number(p.maxBooks) : undefined),
           },
           create: {
             category: p.category,
-            loanPeriodDays: Number(p.loanPeriodDays || 14),
-            maxRenewals: Number(p.maxRenewals || 2),
-            finePerDay: Number(p.finePerDay || 2.0),
+            loanDurationDays: Number(p.loanPeriodDays || p.loanDurationDays || 14),
+            renewalLimit: Number(p.maxRenewals || p.renewalLimit || 2),
+            fineRatePerDay: Number(p.finePerDay || p.fineRatePerDay || 2.0),
             gracePeriodDays: Number(p.gracePeriodDays || 2),
-            maxBooksAllowed: Number(p.maxBooksAllowed || 3),
+            maxBooks: Number(p.maxBooksAllowed || p.maxBooks || 3),
+            maxFine: 150.0,
           },
         })
-      ),
-      { maxWait: 15000, timeout: 30000 }
+      )
     );
 
     // Audit log
     await prisma.auditLog.create({
       data: {
         actorId: session.id,
+        actorRole: session.role,
         action: "POLICIES_UPDATED",
-        entityType: "Policy",
-        metadataJson: JSON.stringify(policies),
+        entityType: "LibraryPolicy",
+        metadataJson: JSON.stringify({ count: updatedPolicies.length, categories: policies.map((p: any) => p.category) }),
       },
     });
 
-    return NextResponse.json({ success: true, policies: updatedPolicies });
+    return NextResponse.json({ policies: updatedPolicies });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

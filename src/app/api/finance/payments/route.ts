@@ -88,3 +88,99 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getCurrentUser();
+    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+      return NextResponse.json(
+        { error: "Unauthorized. Accounts Operator or Admin privileges required to edit payments." },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json();
+    const { paymentId, receiptNo, paymentMethod, amount, description, referenceNumber } = body;
+
+    let payment = null;
+    if (paymentId) {
+      payment = await prisma.payment.findUnique({
+        where: { id: paymentId },
+        include: { receipt: true, allocations: true },
+      });
+    } else if (receiptNo) {
+      const receipt = await prisma.receipt.findUnique({
+        where: { receiptNo },
+        include: { payment: { include: { receipt: true, allocations: true } } },
+      });
+      payment = receipt?.payment || null;
+    }
+
+    if (!payment) {
+      return NextResponse.json({ error: "Payment record not found." }, { status: 404 });
+    }
+
+    const updateData: any = {};
+    if (paymentMethod) {
+      const methodEnumMap: Record<string, string> = {
+        Cash: "CASH",
+        UPI: "OTHER_APPROVED",
+        Card: "DEMAND_DRAFT",
+        Manual: "MANUAL_CHALLAN",
+        CASH: "CASH",
+        OTHER_APPROVED: "OTHER_APPROVED",
+        DEMAND_DRAFT: "DEMAND_DRAFT",
+        MANUAL_CHALLAN: "MANUAL_CHALLAN",
+      };
+      updateData.paymentMethod = methodEnumMap[paymentMethod] || paymentMethod;
+    }
+
+    if (amount !== undefined && !isNaN(Number(amount))) {
+      const numAmount = parseFloat(amount);
+      updateData.amount = numAmount;
+      if (payment.receipt) {
+        await prisma.receipt.update({
+          where: { id: payment.receipt.id },
+          data: { totalAmount: numAmount },
+        });
+      }
+    }
+
+    if (referenceNumber !== undefined) {
+      updateData.referenceNumber = referenceNumber;
+    }
+
+    const updatedPayment = await prisma.payment.update({
+      where: { id: payment.id },
+      data: updateData,
+      include: { receipt: true, allocations: { include: { charge: true } } },
+    });
+
+    if (description && payment.allocations && payment.allocations.length > 0) {
+      for (const alloc of payment.allocations) {
+        await prisma.feeCharge.update({
+          where: { id: alloc.chargeId },
+          data: { description },
+        });
+      }
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: session.id,
+        action: "PAYMENT_EDITED",
+        entityType: "Payment",
+        entityId: payment.id,
+        metadataJson: JSON.stringify({
+          receiptNo: payment.receipt?.receiptNo,
+          updatedFields: updateData,
+          description,
+        }),
+      },
+    });
+
+    return NextResponse.json({ success: true, payment: updatedPayment });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

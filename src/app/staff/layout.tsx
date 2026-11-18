@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard,
   BookOpen,
@@ -21,12 +21,17 @@ import {
   ArrowLeftRight,
   Menu,
   Check,
+  UserCheck,
+  Shield,
+  Lock,
 } from "lucide-react";
 import { StaffProvider, useStaff } from "@/context/StaffContext";
 
 function StaffLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab");
   const [currentUser, setCurrentUser] = useState<any | null>(null);
 
   const {
@@ -101,7 +106,12 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
     if (pathname.includes("/staff/catalogue") || pathname.includes("/staff/inventory")) return "Catalogue & Stacks";
     if (pathname.includes("/staff/members")) return "Members Directory";
     if (pathname.includes("/staff/reports")) return "Reports & Audit";
-    if (pathname.includes("/staff/administration")) return "Administration";
+    if (pathname.includes("/staff/administration")) {
+      if (currentTab === "roles") return "Governance > Roles & Access Control";
+      if (currentTab === "policies") return "Administration > Policies";
+      if (currentTab === "audit") return "Administration > Audit Trail";
+      return "Governance > Library Staff";
+    }
     return "Circulation Desk";
   };
 
@@ -148,6 +158,23 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
       ],
     },
     {
+      title: "GOVERNANCE & USERS",
+      items: [
+        {
+          href: "/staff/administration?tab=staff",
+          label: "Library Staff",
+          icon: UserCheck,
+          active: pathname.startsWith("/staff/administration") && (!currentTab || currentTab === "staff"),
+        },
+        {
+          href: "/staff/administration?tab=roles",
+          label: "Roles & Access Control",
+          icon: Shield,
+          active: pathname.startsWith("/staff/administration") && currentTab === "roles",
+        },
+      ],
+    },
+    {
       title: "SYSTEM",
       items: [
         {
@@ -157,10 +184,10 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
           active: pathname.startsWith("/staff/reports"),
         },
         {
-          href: "/staff/administration",
+          href: "/staff/administration?tab=policies",
           label: "Administration",
           icon: Sliders,
-          active: pathname.startsWith("/staff/administration"),
+          active: pathname.startsWith("/staff/administration") && (currentTab === "policies" || currentTab === "audit"),
         },
       ],
     },
@@ -501,14 +528,16 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
 
 
 
-            <Link
-              href="/"
-              className="text-xs text-slate-600 hover:text-[#0d7a55] font-medium hidden sm:flex items-center gap-1 transition"
-              title="Return to Public OPAC"
+            <a
+              href={process.env.NEXT_PUBLIC_OPAC_URL || "http://localhost:3000"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-slate-600 hover:text-[#0d7a55] font-medium hidden sm:flex items-center gap-1 transition cursor-pointer"
+              title="Open Public OPAC Portal (Port 3000)"
             >
               <span>Public OPAC</span>
               <ExternalLink className="w-3 h-3" />
-            </Link>
+            </a>
           </div>
         </header>
 
@@ -709,7 +738,9 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   return (
     <StaffProvider>
-      <StaffLayoutInner>{children}</StaffLayoutInner>
+      <Suspense fallback={null}>
+        <StaffLayoutInner>{children}</StaffLayoutInner>
+      </Suspense>
     </StaffProvider>
   );
 }

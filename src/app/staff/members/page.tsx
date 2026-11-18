@@ -84,23 +84,25 @@ export default function StaffMembersPage() {
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const generateStudentCredentials = useCallback(() => {
+  const generateCredentials = useCallback((cat: string = "Adult") => {
     const year = new Date().getFullYear();
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const generatedId = `STU-${year}-${randomSuffix}`;
+    const prefix = cat === "Student" ? "STU" : "GPL";
+    const generatedId = `${prefix}-${year}-${randomSuffix}`;
     const num = Math.floor(100 + Math.random() * 900);
     const spec = ["@", "#", "$", "!"][Math.floor(Math.random() * 4)];
-    const generatedPass = `Stu@${year}${spec}${num}`;
+    const passPrefix = cat === "Student" ? "Stu" : "Lib";
+    const generatedPass = `${passPrefix}@${year}${spec}${num}`;
 
     setNewUserId(generatedId);
     setNewPassword(generatedPass);
   }, []);
 
   useEffect(() => {
-    if (newCategory === "Student" && !newUserId) {
-      generateStudentCredentials();
+    if (registerModalOpen && !newUserId) {
+      generateCredentials(newCategory);
     }
-  }, [newCategory, newUserId, generateStudentCredentials]);
+  }, [registerModalOpen, newCategory, newUserId, generateCredentials]);
 
   const filterRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -279,15 +281,13 @@ export default function StaffMembersPage() {
       showToast(`Registered member ${data.member.fullName} (${data.member.memberNo}) successfully.`);
       setRegisterModalOpen(false);
 
-      if (newCategory === "Student") {
-        setRegisteredCredentials({
-          fullName: data.member.fullName,
-          memberNo: data.member.memberNo,
-          email: data.member.email,
-          password: finalPassword,
-          category: "Student",
-        });
-      }
+      setRegisteredCredentials({
+        fullName: data.member.fullName,
+        memberNo: data.member.memberNo,
+        email: data.member.email,
+        password: finalPassword,
+        category: newCategory,
+      });
 
       setNewName("");
       setNewEmail("");
@@ -565,7 +565,7 @@ export default function StaffMembersPage() {
             <thead>
               <tr className="bg-[#f2f7f4] border-b border-slate-200/80 text-[11px] font-bold text-[#536b60] uppercase tracking-wider">
                 <th className="py-3 px-5">MEMBER</th>
-                <th className="py-3 px-5">MEMBER NO.</th>
+                <th className="py-3 px-5">MEMBER NO. / USER ID</th>
                 <th className="py-3 px-5">CATEGORY</th>
                 <th className="py-3 px-5">NEXT DUE DATE</th>
                 <th className="py-3 px-5">STATUS</th>
@@ -657,6 +657,22 @@ export default function StaffMembersPage() {
                           >
                             <CreditCard className="w-3.5 h-3.5 text-[#0d7a55]" />
                             <span>View Digital Card</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setRegisteredCredentials({
+                                fullName: member.name,
+                                memberNo: member.memberNo,
+                                email: member.email || "",
+                                password: "Member@123",
+                                category: member.category,
+                              });
+                              setActiveActionDropdown(null);
+                            }}
+                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                          >
+                            <Key className="w-3.5 h-3.5 text-amber-600" />
+                            <span>View Credentials</span>
                           </button>
                           <button
                             onClick={() => handleRenewMember(member.id)}
@@ -802,9 +818,7 @@ export default function StaffMembersPage() {
                   onChange={(e) => {
                     const cat = e.target.value as any;
                     setNewCategory(cat);
-                    if (cat === "Student") {
-                      generateStudentCredentials();
-                    }
+                    generateCredentials(cat);
                   }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
                 >
@@ -816,80 +830,78 @@ export default function StaffMembersPage() {
                 </select>
               </div>
 
-              {/* AUTO-GENERATED CREDENTIALS FOR STUDENTS */}
-              {newCategory === "Student" && (
-                <div className="p-3 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-emerald-900 font-semibold text-xs">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Auto-Generated Student Credentials (छात्र लॉगिन विवरण)</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={generateStudentCredentials}
-                      className="text-[11px] text-emerald-800 hover:text-emerald-950 font-medium flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shadow-xs cursor-pointer hover:bg-emerald-50 transition"
-                      title="नया आईडी व पासवर्ड जनरेट करें"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                      <span>Regenerate</span>
-                    </button>
+              {/* AUTO-GENERATED CREDENTIALS FOR ALL MEMBERS */}
+              <div className="p-3 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-emerald-900 font-semibold text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Auto-Generated Login Credentials (लॉगिन विवरण)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => generateCredentials(newCategory)}
+                    className="text-[11px] text-emerald-800 hover:text-emerald-950 font-medium flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shadow-xs cursor-pointer hover:bg-emerald-50 transition"
+                    title="नया आईडी व पासवर्ड जनरेट करें"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Regenerate</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] text-slate-600 font-medium mb-1">
+                      User ID / Member No.
+                    </label>
+                    <input
+                      type="text"
+                      value={newUserId}
+                      onChange={(e) => setNewUserId(e.target.value.toUpperCase())}
+                      placeholder={newCategory === "Student" ? "STU-2026-XXXX" : "GPL-2026-XXXX"}
+                      className="w-full px-2.5 py-1.5 font-mono text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded-lg focus:outline-[#0d7a55]"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div>
-                      <label className="block text-[11px] text-slate-600 font-medium mb-1">
-                        Student User ID
-                      </label>
+                  <div>
+                    <label className="block text-[11px] text-slate-600 font-medium mb-1">
+                      Login Password
+                    </label>
+                    <div className="relative flex items-center">
                       <input
-                        type="text"
-                        value={newUserId}
-                        onChange={(e) => setNewUserId(e.target.value.toUpperCase())}
-                        placeholder="STU-2026-XXXX"
-                        className="w-full px-2.5 py-1.5 font-mono text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded-lg focus:outline-[#0d7a55]"
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Password"
+                        className="w-full px-2.5 py-1.5 font-mono text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded-lg focus:outline-[#0d7a55] pr-14"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] text-slate-600 font-medium mb-1">
-                        Student Password
-                      </label>
-                      <div className="relative flex items-center">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="Password"
-                          className="w-full px-2.5 py-1.5 font-mono text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded-lg focus:outline-[#0d7a55] pr-14"
-                        />
-                        <div className="absolute right-1 flex items-center gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
-                            title={showPassword ? "Hide" : "Show"}
-                          >
-                            {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(`User ID: ${newUserId}\nPassword: ${newPassword}`);
-                              showToast("छात्र क्रेडेंशियल्स कॉपी हो गए!");
-                            }}
-                            className="p-1 text-slate-400 hover:text-emerald-700 cursor-pointer"
-                            title="Copy credentials"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                      <div className="absolute right-1 flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                          title={showPassword ? "Hide" : "Show"}
+                        >
+                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(`User ID: ${newUserId}\nPassword: ${newPassword}`);
+                            showToast("लॉगिन क्रेडेंशियल्स कॉपी हो गए!");
+                          }}
+                          className="p-1 text-slate-400 hover:text-emerald-700 cursor-pointer"
+                          title="Copy credentials"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
-                  <p className="text-[10px] text-emerald-800 leading-tight">
-                    💡 छात्र इस यूज़र आईडी और पासवर्ड का उपयोग करके पोर्टल पर लॉगिन कर सकेंगे।
-                  </p>
                 </div>
-              )}
+                <p className="text-[10px] text-emerald-800 leading-tight">
+                  💡 सदस्य इस User ID और पासवर्ड का उपयोग करके सीधे लॉगिन कर सकेंगे।
+                </p>
+              </div>
 
               <div>
                 <label className="block text-slate-700 font-medium mb-1">

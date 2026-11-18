@@ -53,14 +53,14 @@ export async function GET(req: NextRequest) {
         orderBy: { issuedAt: "desc" },
       }),
       prisma.feeCharge.findMany({
-        orderBy: { assessedAt: "desc" },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.payment.findMany({
-        orderBy: { paidAt: "desc" },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.auditLog.findMany({
         take: 1000,
-        orderBy: { createdAt: "desc" },
+        orderBy: { timestamp: "desc" },
       }),
     ]);
 
