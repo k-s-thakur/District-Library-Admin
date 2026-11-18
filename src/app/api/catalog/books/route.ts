@@ -45,19 +45,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { title, isbn, subtitle, edition, publicationYear, language, ddcCode, bookNumber, description, coverImageUrl, categoryId, publisherName, authors, isFeatured } = body;
 
-    if (!title || !isbn) {
-      return NextResponse.json({ error: "Title and ISBN are required." }, { status: 400 });
+    if (!title) {
+      return NextResponse.json({ error: "Title is required." }, { status: 400 });
     }
 
-    const isbnCheck = validateIsbn(isbn);
-    if (!isbnCheck.isValid) {
-      return NextResponse.json({ error: isbnCheck.error || "Invalid ISBN format" }, { status: 400 });
-    }
+    // ISBN is optional and has no restrictions.
+    // If not provided, generate a unique catalog identifier for database uniqueness.
+    const finalIsbn = isbn && isbn.trim().length > 0
+      ? isbn.trim()
+      : `LIB-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 1000)}`;
 
     const book = await createBook(
       {
         title,
-        isbn: isbnCheck.formatted || isbnCheck.normalized || isbn.trim(),
+        isbn: finalIsbn,
         subtitle,
         edition,
         publicationYear,

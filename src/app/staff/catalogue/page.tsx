@@ -74,7 +74,6 @@ export default function StaffCataloguePage() {
   const [newSubtitle, setNewSubtitle] = useState("");
   const [newAuthor, setNewAuthor] = useState("");
   const [newIsbn, setNewIsbn] = useState("");
-  const [isbnValidation, setIsbnValidation] = useState<IsbnValidationResult>({ isValid: false });
   const [newCategory, setNewCategory] = useState("Fiction");
   const [newDdc, setNewDdc] = useState("823");
   const [newCutter, setNewCutter] = useState("");
@@ -88,20 +87,9 @@ export default function StaffCataloguePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
-  const handleIsbnChange = (val: string) => {
-    setNewIsbn(val);
-    if (!val.trim()) {
-      setIsbnValidation({ isValid: false, error: "ISBN आवश्यक है" });
-    } else {
-      const check = validateIsbn(val);
-      setIsbnValidation(check);
-    }
-  };
-
   const handleGenerateIsbn = () => {
     const generated = generateValidIsbn13();
     setNewIsbn(generated);
-    setIsbnValidation(validateIsbn(generated));
   };
 
   const filterRef = useRef<HTMLDivElement>(null);
@@ -205,12 +193,6 @@ export default function StaffCataloguePage() {
       return;
     }
 
-    const isbnCheck = validateIsbn(newIsbn.trim());
-    if (!isbnCheck.isValid) {
-      showToast(isbnCheck.error || "कृपया मान्य 10 या 13 अंक का ISBN दर्ज करें।");
-      return;
-    }
-
     submittingRef.current = true;
     setIsSubmitting(true);
 
@@ -229,7 +211,7 @@ export default function StaffCataloguePage() {
         body: JSON.stringify({
           title: newTitle.trim(),
           subtitle: newSubtitle.trim() || undefined,
-          isbn: isbnCheck.formatted || isbnCheck.normalized,
+          isbn: newIsbn.trim() || undefined,
           language: newLanguage,
           ddcCode: newDdc.trim() || undefined,
           bookNumber: newCutter.trim() || undefined,
@@ -693,60 +675,36 @@ export default function StaffCataloguePage() {
                 />
               </div>
 
-              {/* ISBN Field with Validation & Auto Generator */}
+              {/* ISBN Field (Optional, No strict rules) */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="block text-slate-700 font-medium">
-                    ISBN Code (10 या 13 अंक) *
+                    ISBN Code (वैकल्पिक / Optional)
                   </label>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    Format: 978-XXXXXXXXXX या XXXXXXXXXX
+                  <span className="text-[10px] text-slate-400">
+                    कोई भी पहचान संख्या दर्ज करें या खाली छोड़ें
                   </span>
                 </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <input
                       type="text"
-                      required
-                      placeholder="उदा. 978-81-203-4567-8 या 0-19-853453-1"
+                      placeholder="उदा. 978-81-203-4567-8 या कोई भी कोड (वैकल्पिक)"
                       value={newIsbn}
-                      onChange={(e) => handleIsbnChange(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-xl font-mono text-xs focus:outline-none transition ${
-                        !newIsbn
-                          ? "border-slate-300 focus:border-[#0d7a55]"
-                          : isbnValidation.isValid
-                          ? "border-emerald-500 bg-emerald-50/20 text-emerald-950 focus:border-emerald-600"
-                          : "border-rose-400 bg-rose-50/20 text-rose-950 focus:border-rose-500"
-                      }`}
+                      onChange={(e) => setNewIsbn(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs focus:outline-[#0d7a55] bg-white transition"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={handleGenerateIsbn}
-                    title="यदि ISBN उपलब्ध न हो तो मान्य ISBN-13 जनरेट करें"
+                    title="यदि ISBN स्वतः जनरेट करना चाहें"
                     className="px-3 py-2 shrink-0 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 font-medium flex items-center gap-1.5 transition text-[11px] cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                     <span>Auto ISBN</span>
                   </button>
                 </div>
-
-                {/* Validation Feedback */}
-                {newIsbn && (
-                  <div className="pt-0.5">
-                    {isbnValidation.isValid ? (
-                      <span className="text-emerald-700 font-medium flex items-center gap-1 text-[11px]">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        मान्य {isbnValidation.type}: {isbnValidation.formatted}
-                      </span>
-                    ) : (
-                      <span className="text-rose-600 font-medium flex items-center gap-1 text-[11px]">
-                        <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                        {isbnValidation.error}
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Publishing Year & Language */}
@@ -905,7 +863,7 @@ export default function StaffCataloguePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !newTitle.trim() || !newAuthor.trim() || !isbnValidation.isValid}
+                  disabled={isSubmitting || !newTitle.trim() || !newAuthor.trim()}
                   className="px-5 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none cursor-pointer"
                 >
                   {isSubmitting && (
