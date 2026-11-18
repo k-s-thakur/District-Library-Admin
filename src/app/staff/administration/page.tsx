@@ -149,7 +149,7 @@ export default function StaffAdministrationPage() {
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [staffSearch, setStaffSearch] = useState("");
   const [staffRoleFilter, setStaffRoleFilter] = useState("ALL");
-  const [staffStatusFilter, setStaffStatusFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
+  const [staffStatusFilter, setStaffStatusFilter] = useState<"ALL" | "ACTIVE">("ALL");
   const [staffViewMode, setStaffViewMode] = useState<"table" | "cards">("table");
 
   // Onboard Staff Modal State
@@ -429,30 +429,6 @@ export default function StaffAdministrationPage() {
     }
   };
 
-  const handleToggleStaffStatus = async (staff: StaffMember) => {
-    const nextStatus = staff.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
-    try {
-      const res = await fetch("/api/administration/staff", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: staff.id,
-          status: nextStatus,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to toggle status");
-      }
-
-      showToast(`Staff account "${staff.name}" marked ${nextStatus}.`);
-      loadStaff();
-    } catch (err: any) {
-      showToast(err.message || "Status toggle failed", true);
-    }
-  };
-
   const handleDeleteStaff = async (staff: StaffMember) => {
     if (!confirm(`Are you sure you want to delete staff account "${staff.name}" (${staff.email})?`)) {
       return;
@@ -559,7 +535,6 @@ export default function StaffAdministrationPage() {
   }, [auditLogs, auditSearch]);
 
   const activeStaffCount = staffList.filter((s) => s.status === "ACTIVE").length;
-  const suspendedStaffCount = staffList.filter((s) => s.status === "SUSPENDED").length;
 
   return (
     <div className="space-y-6">
@@ -579,13 +554,11 @@ export default function StaffAdministrationPage() {
         </div>
       )}
 
-      {/* TOP HEADER & NAVIGATION (Inspired by CG State Governance Module) */}
+      {/* TOP HEADER & NAVIGATION */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-0.5">
-            <span>GOVERNANCE & USERS</span>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-teal-700 font-bold">
+          <div className="flex items-center gap-2 text-xs font-semibold text-teal-700 uppercase tracking-wider mb-0.5">
+            <span className="font-bold">
               {activeTab === "staff"
                 ? "District Library Staff"
                 : activeTab === "roles"
@@ -835,16 +808,6 @@ export default function StaffAdministrationPage() {
                 >
                   ● Active ({activeStaffCount})
                 </button>
-                <button
-                  onClick={() => setStaffStatusFilter("SUSPENDED")}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
-                    staffStatusFilter === "SUSPENDED"
-                      ? "bg-rose-700 text-white"
-                      : "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
-                  }`}
-                >
-                  ● Suspended ({suspendedStaffCount})
-                </button>
               </div>
 
               {/* Department Filter & Layout Toggle */}
@@ -978,17 +941,10 @@ export default function StaffAdministrationPage() {
 
                             {/* Status */}
                             <td className="py-3.5 px-4">
-                              {staff.status === "ACTIVE" ? (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                                  <span>Active</span>
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                                  <span>Suspended</span>
-                                </span>
-                              )}
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                                <span>Active</span>
+                              </span>
                             </td>
 
                             {/* Duty / Scope */}
@@ -1025,17 +981,6 @@ export default function StaffAdministrationPage() {
                                 title="Edit profile"
                               >
                                 <Pencil className="w-3.5 h-3.5" />
-                              </button>
-
-                              <button
-                                onClick={() => handleToggleStaffStatus(staff)}
-                                className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition cursor-pointer ${
-                                  staff.status === "ACTIVE"
-                                    ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                                    : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                                }`}
-                              >
-                                {staff.status === "ACTIVE" ? "Suspend" : "Activate"}
                               </button>
 
                               <button
@@ -1791,18 +1736,6 @@ export default function StaffAdministrationPage() {
                     <option value="APPROVING_OFFICER">Approving Officer</option>
                     <option value="LIBRARY_ADMIN">Library Admin</option>
                     <option value="SUPER_ADMIN">Super Admin</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-medium mb-1">Status</label>
-                  <select
-                    value={editStaffStatus}
-                    onChange={(e) => setEditStaffStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white font-medium"
-                  >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
                   </select>
                 </div>
               </div>

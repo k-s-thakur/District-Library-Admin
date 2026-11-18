@@ -107,10 +107,10 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
     if (pathname.includes("/staff/members")) return "Members Directory";
     if (pathname.includes("/staff/reports")) return "Reports & Audit";
     if (pathname.includes("/staff/administration")) {
-      if (currentTab === "roles") return "Governance > Roles & Access Control";
+      if (currentTab === "roles") return "Roles & Access Control";
       if (currentTab === "policies") return "Administration > Policies";
       if (currentTab === "audit") return "Administration > Audit Trail";
-      return "Governance > Library Staff";
+      return "Library Staff";
     }
     return "Circulation Desk";
   };
@@ -158,7 +158,7 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
       ],
     },
     {
-      title: "GOVERNANCE & USERS",
+      title: "STAFF & ROLES",
       items: [
         {
           href: "/staff/administration?tab=staff",
