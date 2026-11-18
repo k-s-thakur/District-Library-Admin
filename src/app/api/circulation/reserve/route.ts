@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         status: { in: ["PENDING", "READY_FOR_PICKUP"] },
       },
       include: {
-        member: { select: { id: true, name: true, memberNo: true } },
+        member: { select: { id: true, fullName: true, memberNo: true } },
         book: { select: { id: true, title: true } },
       },
       orderBy: [{ bookId: "asc" }, { queuePosition: "asc" }],
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
 
     const items = reservations.map((r) => ({
       id: r.id,
-      member: r.member.name,
+      member: r.member.fullName,
       memberNo: r.member.memberNo,
       title: r.book.title,
       status: r.status,

@@ -53,10 +53,9 @@ async function handleRemindersCron(req: NextRequest) {
     });
 
     return NextResponse.json({
-      success: true,
+      ...result,
       message: `Daily circulation reminder cron executed successfully. Dispatched ${result.totalDispatched} notice(s).`,
       timestamp: new Date().toISOString(),
-      ...result,
     });
   } catch (err: any) {
     return NextResponse.json(

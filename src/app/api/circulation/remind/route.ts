@@ -18,9 +18,8 @@ export async function POST(req: NextRequest) {
     if (bulk || (loanIds && Array.isArray(loanIds))) {
       const result = await dispatchBulkReminders(session.id, loanIds);
       return NextResponse.json({
-        success: true,
-        message: `Dispatched ${result.totalDispatched} reminder notice(s).`,
         ...result,
+        message: `Dispatched ${result.totalDispatched} reminder notice(s).`,
       });
     }
 
@@ -37,9 +36,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      success: true,
-      message: `Reminder successfully sent to ${result.member} for "${result.bookTitle}".`,
       ...result,
+      message: `Reminder successfully sent to ${result.member} for "${result.bookTitle}".`,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

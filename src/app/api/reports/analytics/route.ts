@@ -40,18 +40,18 @@ export async function GET(req: NextRequest) {
 
     // 3. Revenue collected (all-time or last 30 days)
     const paymentAgg = await prisma.payment.aggregate({
-      _sum: { amountPaid: true },
+      _sum: { amount: true },
       where: {
         status: "POSTED",
-        paymentDate: { gte: thirtyDaysAgo },
+        createdAt: { gte: thirtyDaysAgo },
       },
     });
 
-    const revenueCollected = Number(paymentAgg._sum.amountPaid || 0);
+    const revenueCollected = Number(paymentAgg._sum?.amount || 0);
 
     // 4. New member enrolments
     const newMemberEnrolments = await prisma.member.count({
-      where: { joinedAt: { gte: thirtyDaysAgo } },
+      where: { registrationDate: { gte: thirtyDaysAgo } },
     });
 
     // 5. Category breakdown
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         name: true,
-        ddcCode: true,
+        ddcPrefix: true,
         books: {
           select: {
             copies: {
@@ -78,14 +78,14 @@ export async function GET(req: NextRequest) {
     let totalLoansAcrossCats = 0;
     const catCounts = categories.map((c) => {
       let loanCount = 0;
-      c.books.forEach((b) => {
-        b.copies.forEach((copy) => {
+      c.books.forEach((b: any) => {
+        b.copies.forEach((copy: any) => {
           loanCount += copy.loans.length;
         });
       });
       totalLoansAcrossCats += loanCount;
       return {
-        name: `${c.name} (${c.ddcCode || "000"}s)`,
+        name: `${c.name} (${c.ddcPrefix || "000"}s)`,
         count: loanCount,
       };
     });
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         title: true,
-        bookAuthors: { select: { author: { select: { name: true } } } },
+        authors: { select: { author: { select: { name: true } } } },
         copies: {
           select: {
             loans: { select: { id: true } },
@@ -119,10 +119,10 @@ export async function GET(req: NextRequest) {
 
     const topBorrowedTitles = books
       .map((b) => {
-        const totalBookLoans = b.copies.reduce((acc, c) => acc + c.loans.length, 0);
+        const totalBookLoans = b.copies.reduce((acc: number, c: any) => acc + c.loans.length, 0);
         return {
           title: b.title,
-          author: b.bookAuthors.map((ba) => ba.author.name).join(", ") || "Unknown",
+          author: b.authors.map((ba) => ba.author.name).join(", ") || "Unknown",
           loans: totalBookLoans,
         };
       })
