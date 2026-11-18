@@ -74,7 +74,7 @@ export default function StaffMembersPage() {
 
   const showToast = useCallback((msg: string, isError = false) => {
     setNotificationToast({ msg, isError });
-    setTimeout(() => setNotificationToast(null), 3500);
+    setTimeout(() => setNotificationToast(null), 10500);
   }, []);
 
   const mapBackendMember = (m: any): MemberRecord => {

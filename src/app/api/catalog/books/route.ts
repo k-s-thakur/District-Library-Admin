@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { searchCatalogue, createBook } from "@/lib/services/catalogue.service";
+import { validateIsbn } from "@/lib/isbn";
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,10 +49,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Title and ISBN are required." }, { status: 400 });
     }
 
+    const isbnCheck = validateIsbn(isbn);
+    if (!isbnCheck.isValid) {
+      return NextResponse.json({ error: isbnCheck.error || "Invalid ISBN format" }, { status: 400 });
+    }
+
     const book = await createBook(
       {
         title,
-        isbn,
+        isbn: isbnCheck.formatted || isbnCheck.normalized || isbn.trim(),
         subtitle,
         edition,
         publicationYear,

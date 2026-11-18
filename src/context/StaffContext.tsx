@@ -26,7 +26,7 @@ export interface StaffContextType {
 const StaffContext = createContext<StaffContextType | undefined>(undefined);
 
 export function StaffProvider({ children }: { children: React.ReactNode }) {
-  const [previewData, setPreviewData] = useState<boolean>(true);
+  const [previewData, setPreviewData] = useState<boolean>(false);
   const [branch, setBranch] = useState<string>("Central Library (New Delhi · Main branch)");
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [staffGuideOpen, setStaffGuideOpen] = useState(false);

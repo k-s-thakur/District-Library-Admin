@@ -19,10 +19,16 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
+  AlertCircle,
+  Sparkles,
+  Calendar,
+  Globe,
+  MapPin,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
 import QRCodeSVG from "@/components/QRCodeSVG";
 import BarcodeSVG from "@/components/BarcodeSVG";
+import { validateIsbn, generateValidIsbn13, IsbnValidationResult } from "@/lib/isbn";
 
 interface CatalogueItem {
   id: string;
@@ -68,14 +74,35 @@ export default function StaffCataloguePage() {
   const [newSubtitle, setNewSubtitle] = useState("");
   const [newAuthor, setNewAuthor] = useState("");
   const [newIsbn, setNewIsbn] = useState("");
+  const [isbnValidation, setIsbnValidation] = useState<IsbnValidationResult>({ isValid: false });
   const [newCategory, setNewCategory] = useState("Fiction");
   const [newDdc, setNewDdc] = useState("823");
   const [newCutter, setNewCutter] = useState("");
-  const [newShelf, setNewShelf] = useState("Aisle 3, Rack B, Shelf 2");
-  const [newCopies, setNewCopies] = useState(3);
+  const [newAisle, setNewAisle] = useState("Aisle 3");
+  const [newRack, setNewRack] = useState("Rack B");
+  const [newShelf, setNewShelf] = useState("Shelf 2");
+  const [newCopies, setNewCopies] = useState(1);
   const [newEdition, setNewEdition] = useState("1st Edition");
-  const [newPubYear, setNewPubYear] = useState("2026");
+  const [newPubYear, setNewPubYear] = useState(new Date().getFullYear().toString());
+  const [newLanguage, setNewLanguage] = useState("Hindi");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+
+  const handleIsbnChange = (val: string) => {
+    setNewIsbn(val);
+    if (!val.trim()) {
+      setIsbnValidation({ isValid: false, error: "ISBN आवश्यक है" });
+    } else {
+      const check = validateIsbn(val);
+      setIsbnValidation(check);
+    }
+  };
+
+  const handleGenerateIsbn = () => {
+    const generated = generateValidIsbn13();
+    setNewIsbn(generated);
+    setIsbnValidation(validateIsbn(generated));
+  };
 
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -162,23 +189,56 @@ export default function StaffCataloguePage() {
 
   const handleAddBook = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent repeated double clicks immediately with synchronous ref lock
+    if (submittingRef.current || isSubmitting) {
+      return;
+    }
+
+    if (!newTitle.trim()) {
+      showToast("कृपया पुस्तक का शीर्षक (Book Title) दर्ज करें।");
+      return;
+    }
+
+    if (!newAuthor.trim()) {
+      showToast("कृपया लेखक का नाम (Author Name) दर्ज करें।");
+      return;
+    }
+
+    const isbnCheck = validateIsbn(newIsbn.trim());
+    if (!isbnCheck.isValid) {
+      showToast(isbnCheck.error || "कृपया मान्य 10 या 13 अंक का ISBN दर्ज करें।");
+      return;
+    }
+
+    submittingRef.current = true;
     setIsSubmitting(true);
+
     try {
+      const fullShelfLocation = [
+        newAisle.trim() ? (newAisle.toLowerCase().startsWith("aisle") ? newAisle.trim() : `Aisle ${newAisle.trim()}`) : "",
+        newRack.trim() ? (newRack.toLowerCase().startsWith("rack") ? newRack.trim() : `Rack ${newRack.trim()}`) : "",
+        newShelf.trim() ? (newShelf.toLowerCase().startsWith("shelf") ? newShelf.trim() : `Shelf ${newShelf.trim()}`) : "",
+      ]
+        .filter(Boolean)
+        .join(", ") || "General Stacks";
+
       const bookRes = await fetch("/api/catalog/books", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newTitle.trim(),
           subtitle: newSubtitle.trim() || undefined,
-          isbn: newIsbn.trim() || `978-93-${Date.now().toString().slice(-8)}`,
-          language: "Hindi/English",
+          isbn: isbnCheck.formatted || isbnCheck.normalized,
+          language: newLanguage,
           ddcCode: newDdc.trim() || undefined,
           bookNumber: newCutter.trim() || undefined,
-          publicationYear: Number(newPubYear) || 2026,
+          publicationYear: Number(newPubYear) || new Date().getFullYear(),
           edition: newEdition.trim() || undefined,
           authors: newAuthor ? [newAuthor.trim()] : [],
         }),
       });
+
       const bookData = await bookRes.json();
       if (!bookRes.ok) {
         throw new Error(bookData.error || "Failed to create book");
@@ -191,22 +251,34 @@ export default function StaffCataloguePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             bookId: bookData.book.id,
-            shelfLocation: newShelf || "General Stacks",
+            shelfLocation: fullShelfLocation,
             condition: "NEW",
             status: "AVAILABLE",
           }),
         });
       }
 
-      showToast(`Book "${newTitle}" and ${count} physical cop${count > 1 ? "ies" : "y"} accessioned!`);
+      showToast(`पुस्तक "${newTitle}" और ${count} प्रतियां सफलतापूर्वक जोड़ी गईं!`);
       setAddBookModalOpen(false);
+
+      // Reset form
       setNewTitle("");
+      setNewSubtitle("");
       setNewAuthor("");
       setNewIsbn("");
+      setIsbnValidation({ isValid: false });
+      setNewPubYear(new Date().getFullYear().toString());
+      setNewLanguage("Hindi");
+      setNewAisle("Aisle 3");
+      setNewRack("Rack B");
+      setNewShelf("Shelf 2");
+      setNewCopies(1);
+
       await loadData();
     } catch (err: any) {
       showToast(`Error: ${err.message}`);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -552,117 +624,297 @@ export default function StaffCataloguePage() {
       {/* ADD BOOK MODAL */}
       {addBookModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <span className="font-bold text-slate-900 text-sm">
-                Add New Book to Stacks
-              </span>
-              <button onClick={() => setAddBookModalOpen(false)} className="text-slate-400 hover:text-slate-700 cursor-pointer">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    Add New Book to Stacks (नई पुस्तक जोड़ें)
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Enter bibliographical details, stack location, and accession copies.
+                  </p>
+                </div>
+              </div>
+              <button
+                disabled={isSubmitting}
+                onClick={() => setAddBookModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer disabled:opacity-50"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddBook} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-700 font-medium mb-1">
-                  Book Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Discovery of India"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
-                />
+            <form onSubmit={handleAddBook} className="space-y-3.5 text-xs">
+              {/* Title & Subtitle */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Book Title (पुस्तक का नाम) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="उदा. Discovery of India"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Subtitle (उप-शीर्षक - वैकल्पिक)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="उदा. An Indian Classic"
+                    value={newSubtitle}
+                    onChange={(e) => setNewSubtitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                  />
+                </div>
               </div>
 
+              {/* Author */}
               <div>
                 <label className="block text-slate-700 font-medium mb-1">
-                  Primary Author *
+                  Primary Author (मुख्य लेखक) *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Jawaharlal Nehru"
+                  placeholder="उदा. Jawaharlal Nehru"
                   value={newAuthor}
                   onChange={(e) => setNewAuthor(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* ISBN Field with Validation & Auto Generator */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="block text-slate-700 font-medium">
+                    ISBN Code (10 या 13 अंक) *
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Format: 978-XXXXXXXXXX या XXXXXXXXXX
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      required
+                      placeholder="उदा. 978-81-203-4567-8 या 0-19-853453-1"
+                      value={newIsbn}
+                      onChange={(e) => handleIsbnChange(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-xl font-mono text-xs focus:outline-none transition ${
+                        !newIsbn
+                          ? "border-slate-300 focus:border-[#0d7a55]"
+                          : isbnValidation.isValid
+                          ? "border-emerald-500 bg-emerald-50/20 text-emerald-950 focus:border-emerald-600"
+                          : "border-rose-400 bg-rose-50/20 text-rose-950 focus:border-rose-500"
+                      }`}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleGenerateIsbn}
+                    title="यदि ISBN उपलब्ध न हो तो मान्य ISBN-13 जनरेट करें"
+                    className="px-3 py-2 shrink-0 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-slate-700 font-medium flex items-center gap-1.5 transition text-[11px] cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Auto ISBN</span>
+                  </button>
+                </div>
+
+                {/* Validation Feedback */}
+                {newIsbn && (
+                  <div className="pt-0.5">
+                    {isbnValidation.isValid ? (
+                      <span className="text-emerald-700 font-medium flex items-center gap-1 text-[11px]">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        मान्य {isbnValidation.type}: {isbnValidation.formatted}
+                      </span>
+                    ) : (
+                      <span className="text-rose-600 font-medium flex items-center gap-1 text-[11px]">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                        {isbnValidation.error}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Publishing Year & Language */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">
-                    ISBN Code
+                  <label className="block text-slate-700 font-medium mb-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Publishing Year (प्रकाशन वर्ष)</span>
                   </label>
                   <input
-                    type="text"
-                    placeholder="978-0195623598"
-                    value={newIsbn}
-                    onChange={(e) => setNewIsbn(e.target.value)}
+                    type="number"
+                    min="1800"
+                    max="2099"
+                    placeholder="2026"
+                    value={newPubYear}
+                    onChange={(e) => setNewPubYear(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">
-                    Category
+                  <label className="block text-slate-700 font-medium mb-1 flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Language (भाषा)</span>
                   </label>
                   <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
+                    value={newLanguage}
+                    onChange={(e) => setNewLanguage(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white cursor-pointer"
                   >
-                    <option>Fiction</option>
-                    <option>History</option>
-                    <option>Biography</option>
-                    <option>Science</option>
-                    <option>Philosophy</option>
+                    <option value="Hindi">हिन्दी (Hindi)</option>
+                    <option value="English">English</option>
+                    <option value="Hindi/English">द्विभाषी (Hindi/English)</option>
+                    <option value="Sanskrit">संस्कृत (Sanskrit)</option>
+                    <option value="Chhattisgarhi">छत्तीसगढ़ी (Chhattisgarhi)</option>
+                    <option value="Other">अन्य (Other)</option>
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Category & DDC */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-medium mb-1">
-                    Dewey Decimal Class
+                    Category (श्रेणी)
+                  </label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white cursor-pointer"
+                  >
+                    <option value="Fiction">Fiction (कथा साहित्य)</option>
+                    <option value="History">History (इतिहास)</option>
+                    <option value="Biography">Biography (जीवनी)</option>
+                    <option value="Science">Science (विज्ञान)</option>
+                    <option value="Philosophy">Philosophy (दर्शनशास्त्र)</option>
+                    <option value="Literature">Literature (साहित्य)</option>
+                    <option value="Reference">Reference (संदर्भ)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">
+                    Dewey Decimal Class (DDC)
                   </label>
                   <input
                     type="text"
-                    placeholder="954"
+                    placeholder="उदा. 823 या 954"
                     value={newDdc}
                     onChange={(e) => setNewDdc(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-700 font-medium mb-1">
-                    Number of Copies
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={newCopies}
-                    onChange={(e) => setNewCopies(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
-                  />
+              </div>
+
+              {/* Physical Stack Coordinates: Aisle, Rack, Shelf */}
+              <div className="p-3.5 rounded-xl border border-teal-100 bg-teal-50/40 space-y-2">
+                <div className="flex items-center gap-1.5 text-slate-800 font-semibold text-xs">
+                  <MapPin className="w-3.5 h-3.5 text-[#0d7a55]" />
+                  <span>Physical Stack Location (किताब रखने का स्थान)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div>
+                    <label className="block text-slate-600 font-medium mb-1 text-[11px]">
+                      Aisle No. (आइल)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="उदा. Aisle 3"
+                      value={newAisle}
+                      onChange={(e) => setNewAisle(e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-[#0d7a55] bg-white text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-medium mb-1 text-[11px]">
+                      Rack No. (रैक)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="उदा. Rack B"
+                      value={newRack}
+                      onChange={(e) => setNewRack(e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-[#0d7a55] bg-white text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 font-medium mb-1 text-[11px]">
+                      Shelf / Cell (शेल्फ / सेल)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="उदा. Shelf 2"
+                      value={newShelf}
+                      onChange={(e) => setNewShelf(e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg focus:outline-[#0d7a55] bg-white text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="text-[11px] text-teal-800 font-medium pt-0.5">
+                  पूर्ण स्थान (Full Location):{" "}
+                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-teal-200">
+                    {[
+                      newAisle.trim() ? (newAisle.toLowerCase().startsWith("aisle") ? newAisle.trim() : `Aisle ${newAisle.trim()}`) : "",
+                      newRack.trim() ? (newRack.toLowerCase().startsWith("rack") ? newRack.trim() : `Rack ${newRack.trim()}`) : "",
+                      newShelf.trim() ? (newShelf.toLowerCase().startsWith("shelf") ? newShelf.trim() : `Shelf ${newShelf.trim()}`) : "",
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "General Stacks"}
+                  </span>
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Number of Copies */}
+              <div>
+                <label className="block text-slate-700 font-medium mb-1">
+                  Number of Copies (प्रतियों की संख्या)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={newCopies}
+                  onChange={(e) => setNewCopies(Math.max(1, Number(e.target.value)))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
+                />
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div className="pt-2 flex justify-end gap-2.5">
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => setAddBookModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium cursor-pointer"
+                  disabled={isSubmitting || !newTitle.trim() || !newAuthor.trim() || !isbnValidation.isValid}
+                  className="px-5 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none cursor-pointer"
                 >
-                  {isSubmitting ? "Accessioning..." : "Accession to Catalogue"}
+                  {isSubmitting && (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  <span>{isSubmitting ? "Accessioning Book..." : "Add Book to Stacks (पुस्तक जोड़ें)"}</span>
                 </button>
               </div>
             </form>

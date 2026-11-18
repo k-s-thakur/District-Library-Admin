@@ -70,38 +70,9 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("library_session")?.value;
-    if (token) {
-      const user = await verifySessionToken(token);
-      if (user) return user;
-    }
-
-    // Default to Super Admin so login is not required
-    const defaultStaff =
-      (await prisma.staffUser.findFirst({
-        where: { role: "SUPER_ADMIN" },
-      })) || (await prisma.staffUser.findFirst());
-
-    if (defaultStaff) {
-      return {
-        id: defaultStaff.id,
-        email: defaultStaff.email,
-        name: defaultStaff.name,
-        role: defaultStaff.role as UserRole,
-      };
-    }
-
-    return {
-      id: "super-admin-default",
-      email: "superadmin@library.gov.in",
-      name: "Dr. K. S. Thakur",
-      role: "SUPER_ADMIN",
-    };
+    if (!token) return null;
+    return await verifySessionToken(token);
   } catch {
-    return {
-      id: "super-admin-default",
-      email: "superadmin@library.gov.in",
-      name: "Dr. K. S. Thakur",
-      role: "SUPER_ADMIN",
-    };
+    return null;
   }
 }
