@@ -235,57 +235,31 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => fillCredentials("superadmin@library.gov.in", "Admin@123", "Super Admin")}
-                    className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/80 text-emerald-950 font-medium transition text-left cursor-pointer group"
+                    className="p-3 rounded-xl border border-emerald-300 bg-emerald-50/90 hover:bg-emerald-100 text-emerald-950 font-medium transition text-left cursor-pointer group shadow-xs"
                   >
                     <div className="font-bold text-xs text-emerald-900 flex items-center justify-between">
                       <span>Super Admin</span>
-                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
-                    <div className="text-[10px] text-emerald-700 font-mono mt-0.5 truncate">
+                    <div className="text-[11px] text-emerald-700 font-mono mt-1 truncate">
                       superadmin@library.gov.in
                     </div>
+                    <div className="text-[10px] text-emerald-600 mt-0.5">Password: Admin@123</div>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => fillCredentials("admin@library.gov.in", "Admin@123", "Library Admin")}
-                    className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 font-medium transition text-left cursor-pointer"
+                    onClick={() => fillCredentials("librarian@library.gov.in", "Admin@123", "Librarian")}
+                    className="p-3 rounded-xl border border-teal-300 bg-teal-50/90 hover:bg-teal-100 text-teal-950 font-medium transition text-left cursor-pointer group shadow-xs"
                   >
-                    <div className="font-bold text-xs text-slate-800 flex items-center justify-between">
-                      <span>Library Admin</span>
-                      <Building2 className="w-3 h-3 text-slate-500" />
+                    <div className="font-bold text-xs text-teal-900 flex items-center justify-between">
+                      <span>Librarian</span>
+                      <BookOpen className="w-3.5 h-3.5 text-teal-600" />
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
-                      admin@library.gov.in
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fillCredentials("librarian@library.gov.in", "Admin@123", "Librarian Desk")}
-                    className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 font-medium transition text-left cursor-pointer"
-                  >
-                    <div className="font-bold text-xs text-slate-800 flex items-center justify-between">
-                      <span>Circulation Desk</span>
-                      <BookOpen className="w-3 h-3 text-slate-500" />
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                    <div className="text-[11px] text-teal-700 font-mono mt-1 truncate">
                       librarian@library.gov.in
                     </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fillCredentials("accounts@library.gov.in", "Admin@123", "Accounts Officer")}
-                    className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 font-medium transition text-left cursor-pointer"
-                  >
-                    <div className="font-bold text-xs text-slate-800 flex items-center justify-between">
-                      <span>Accounts & Fees</span>
-                      <Banknote className="w-3 h-3 text-slate-500" />
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
-                      accounts@library.gov.in
-                    </div>
+                    <div className="text-[10px] text-teal-600 mt-0.5">Password: Admin@123</div>
                   </button>
                 </div>
               </div>
