@@ -23,6 +23,11 @@ import {
   AlertCircle,
   RefreshCw,
   Pencil,
+  Users,
+  Calendar,
+  Clock,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 
 interface PaymentReceipt {
@@ -50,12 +55,49 @@ interface OutstandingCharge {
   createdAt: string;
 }
 
+interface MemberFeeReportItem {
+  id: string;
+  memberNo: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  category: string;
+  status: string;
+  registrationDate: string;
+  expiryDate: string;
+  totalPaidLifetime: number;
+  totalPaidThisYear: number;
+  outstandingDues: number;
+  monthsPaidThisYear: number;
+  monthsOverdue: number;
+  feeStatus: "PAID" | "OVERDUE" | "PARTIALLY_PAID";
+  monthlyBreakdown: { month: number; name: string; paid: boolean }[];
+  chargesCount: number;
+  paymentsCount: number;
+}
+
+interface MemberFeeReportSummary {
+  year: number;
+  totalMembers: number;
+  paidMembersCount: number;
+  overdueMembersCount: number;
+  partiallyPaidMembersCount: number;
+  totalCollectedThisYear: number;
+  totalOutstandingDues: number;
+}
+
 const initialReceipts: PaymentReceipt[] = [];
 
 export default function StaffFinancePage() {
-  const [activeTab, setActiveTab] = useState<"register" | "reversal" | "waivers">("register");
+  const [activeTab, setActiveTab] = useState<"register" | "members_report" | "waivers" | "reversal">("register");
   const [receipts, setReceipts] = useState<PaymentReceipt[]>(initialReceipts);
   const [outstandingCharges, setOutstandingCharges] = useState<OutstandingCharge[]>([]);
+  const [membersReport, setMembersReport] = useState<MemberFeeReportItem[]>([]);
+  const [reportSummary, setReportSummary] = useState<MemberFeeReportSummary | null>(null);
+  const [reportSearch, setReportSearch] = useState("");
+  const [reportStatusFilter, setReportStatusFilter] = useState<"ALL" | "PAID" | "OVERDUE" | "PARTIALLY_PAID">("ALL");
+  const [reportCategoryFilter, setReportCategoryFilter] = useState("ALL");
+  const [selectedReportMember, setSelectedReportMember] = useState<MemberFeeReportItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [metrics, setMetrics] = useState({
@@ -183,6 +225,14 @@ export default function StaffFinancePage() {
             }))
           );
         }
+      }
+
+      // 3. Fetch member fee status report
+      const reportRes = await fetch("/api/finance/members-report");
+      if (reportRes.ok) {
+        const rData = await reportRes.json();
+        setMembersReport(rData.members || []);
+        setReportSummary(rData.summary || null);
       }
     } catch (err) {
       console.error("Failed to load finance data", err);
@@ -408,6 +458,68 @@ export default function StaffFinancePage() {
     );
   });
 
+  const filteredMemberReport = membersReport.filter((m) => {
+    const q = reportSearch.toLowerCase().trim();
+    if (q) {
+      const match =
+        m.fullName.toLowerCase().includes(q) ||
+        m.memberNo.toLowerCase().includes(q) ||
+        (m.phone && m.phone.toLowerCase().includes(q)) ||
+        m.email.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+
+    if (reportStatusFilter !== "ALL") {
+      if (m.feeStatus !== reportStatusFilter) return false;
+    }
+
+    if (reportCategoryFilter !== "ALL") {
+      if (m.category !== reportCategoryFilter) return false;
+    }
+
+    return true;
+  });
+
+  const handleExportMemberReportCSV = () => {
+    const headers = [
+      "Member No",
+      "Full Name",
+      "Category",
+      "Membership Status",
+      `Months Paid (${reportSummary?.year || 2026})`,
+      "Months Overdue",
+      `Fees Paid (${reportSummary?.year || 2026})`,
+      "Lifetime Fees Paid",
+      "Pending Dues",
+      "Fee Status",
+      "Valid Till",
+    ];
+    const rows = filteredMemberReport.map((m) => [
+      m.memberNo,
+      `"${m.fullName}"`,
+      m.category,
+      m.status,
+      `${m.monthsPaidThisYear} / 12`,
+      m.monthsOverdue > 0 ? `${m.monthsOverdue} Months` : "0 (Nil)",
+      `₹ ${m.totalPaidThisYear}`,
+      `₹ ${m.totalPaidLifetime}`,
+      `₹ ${m.outstandingDues}`,
+      m.feeStatus,
+      new Date(m.expiryDate).toLocaleDateString("en-IN"),
+    ]);
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `District_Library_Member_Fee_Report_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Member fee report exported successfully.");
+  };
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -457,11 +569,17 @@ export default function StaffFinancePage() {
           </button>
 
           <button
-            onClick={handleExportCSV}
+            onClick={() => {
+              if (activeTab === "members_report") {
+                handleExportMemberReportCSV();
+              } else {
+                handleExportCSV();
+              }
+            }}
             className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-500" />
-            <span>Export Register</span>
+            <span>{activeTab === "members_report" ? "Export Fee Report" : "Export Register"}</span>
           </button>
 
           <button
@@ -535,33 +653,50 @@ export default function StaffFinancePage() {
       <div className="flex border-b border-slate-200 gap-6 overflow-x-auto text-xs font-medium pt-1">
         <button
           onClick={() => setActiveTab("register")}
-          className={`pb-2.5 font-medium transition cursor-pointer ${
+          className={`pb-2.5 font-medium transition cursor-pointer flex items-center gap-1.5 ${
             activeTab === "register"
               ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
               : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Receipts Register ({receipts.length})
+          <ReceiptIcon className="w-3.5 h-3.5" />
+          <span>Receipts Register ({receipts.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("members_report")}
+          className={`pb-2.5 font-medium transition cursor-pointer flex items-center gap-1.5 ${
+            activeTab === "members_report"
+              ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
+              : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Member Fee Status Report ({membersReport.length})</span>
+        </button>
+
         <button
           onClick={() => setActiveTab("waivers")}
-          className={`pb-2.5 font-medium transition cursor-pointer ${
+          className={`pb-2.5 font-medium transition cursor-pointer flex items-center gap-1.5 ${
             activeTab === "waivers"
               ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
               : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Outstanding Dues & Fine Waivers ({outstandingCharges.length})
+          <AlertCircle className="w-3.5 h-3.5" />
+          <span>Outstanding Dues & Fine Waivers ({outstandingCharges.length})</span>
         </button>
+
         <button
           onClick={() => setActiveTab("reversal")}
-          className={`pb-2.5 font-medium transition cursor-pointer ${
+          className={`pb-2.5 font-medium transition cursor-pointer flex items-center gap-1.5 ${
             activeTab === "reversal"
               ? "border-b-2 border-[#0d7a55] text-[#0d7a55] font-semibold"
               : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
           }`}
         >
-          Payment Reversals & Audit Desk
+          <RotateCcw className="w-3.5 h-3.5" />
+          <span>Payment Reversals & Audit Desk</span>
         </button>
       </div>
 
@@ -693,6 +828,303 @@ export default function StaffFinancePage() {
           <div className="py-3 px-5 bg-slate-50/70 border-t border-slate-200/80 text-xs text-slate-500 flex items-center gap-1.5">
             <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
             <span>Government treasury receipts recorded in compliance with State Financial Audits.</span>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Member Fee Status & Dues Report */}
+      {activeTab === "members_report" && (
+        <div className="space-y-4">
+          {/* Top KPI Cards for Member Fee Report */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+              <div className="flex items-center gap-2 text-slate-500 text-xs mb-1">
+                <Users className="w-3.5 h-3.5 text-slate-600" />
+                <span>Total Members</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 tabular-nums">
+                {reportSummary?.totalMembers || membersReport.length}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Enrolled Patrons</div>
+            </div>
+
+            <div className="bg-white border border-emerald-200/90 rounded-2xl p-4 shadow-xs bg-emerald-50/30">
+              <div className="flex items-center gap-2 text-emerald-800 text-xs mb-1">
+                <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Fees Paid / Clear</span>
+              </div>
+              <div className="text-2xl font-bold text-emerald-700 tabular-nums">
+                {reportSummary?.paidMembersCount ?? 0}
+              </div>
+              <div className="text-[11px] text-emerald-700/80 mt-0.5">Up to date patrons</div>
+            </div>
+
+            <div className="bg-white border border-rose-200/90 rounded-2xl p-4 shadow-xs bg-rose-50/30">
+              <div className="flex items-center gap-2 text-rose-800 text-xs mb-1">
+                <UserX className="w-3.5 h-3.5 text-rose-600" />
+                <span>Overdue / Defaulters</span>
+              </div>
+              <div className="text-2xl font-bold text-rose-700 tabular-nums">
+                {reportSummary?.overdueMembersCount ?? 0}
+              </div>
+              <div className="text-[11px] text-rose-700/80 mt-0.5">Pending dues or expired</div>
+            </div>
+
+            <div className="bg-white border border-blue-200/90 rounded-2xl p-4 shadow-xs bg-blue-50/30">
+              <div className="flex items-center gap-2 text-blue-800 text-xs mb-1">
+                <IndianRupee className="w-3.5 h-3.5 text-blue-600" />
+                <span>Collected in {reportSummary?.year || 2026}</span>
+              </div>
+              <div className="text-2xl font-bold text-blue-700 tabular-nums">
+                ₹ {(reportSummary?.totalCollectedThisYear ?? 0).toLocaleString("en-IN")}
+              </div>
+              <div className="text-[11px] text-blue-700/80 mt-0.5">Total collected this year</div>
+            </div>
+
+            <div className="bg-white border border-amber-200/90 rounded-2xl p-4 shadow-xs bg-amber-50/30 col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-2 text-amber-800 text-xs mb-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                <span>Pending Overdue Dues</span>
+              </div>
+              <div className="text-2xl font-bold text-amber-700 tabular-nums">
+                ₹ {(reportSummary?.totalOutstandingDues ?? 0).toLocaleString("en-IN")}
+              </div>
+              <div className="text-[11px] text-amber-700/80 mt-0.5">Total overdue amount</div>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+            {/* Header, Search & Filters */}
+            <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] tracking-widest uppercase font-bold text-[#0d7a55]">
+                  ANNUAL & MONTHLY STATUS REPORT
+                </p>
+                <h3 className="text-lg font-bold text-slate-900 mt-0.5">
+                  Member Fee Register ({filteredMemberReport.length})
+                </h3>
+              </div>
+
+              {/* Filters & Search */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+                  <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search member, ID, phone..."
+                    value={reportSearch}
+                    onChange={(e) => setReportSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-full focus:outline-[#0d7a55] focus:bg-white"
+                  />
+                </div>
+
+                <select
+                  value={reportStatusFilter}
+                  onChange={(e) => setReportStatusFilter(e.target.value as any)}
+                  className="px-3 py-1.5 text-xs border border-slate-200 rounded-full bg-slate-50 text-slate-700 focus:outline-[#0d7a55] cursor-pointer"
+                >
+                  <option value="ALL">All Status ({membersReport.length})</option>
+                  <option value="PAID">Fee Paid ({reportSummary?.paidMembersCount ?? 0})</option>
+                  <option value="OVERDUE">Overdue ({reportSummary?.overdueMembersCount ?? 0})</option>
+                  <option value="PARTIALLY_PAID">Partially Paid ({reportSummary?.partiallyPaidMembersCount ?? 0})</option>
+                </select>
+
+                <select
+                  value={reportCategoryFilter}
+                  onChange={(e) => setReportCategoryFilter(e.target.value)}
+                  className="px-3 py-1.5 text-xs border border-slate-200 rounded-full bg-slate-50 text-slate-700 focus:outline-[#0d7a55] cursor-pointer"
+                >
+                  <option value="ALL">All Categories</option>
+                  <option value="GENERAL_CITIZEN">General Citizen</option>
+                  <option value="STUDENT">Student</option>
+                  <option value="SENIOR_CITIZEN">Senior Citizen</option>
+                  <option value="RESEARCHER">Researcher</option>
+                  <option value="GOVT_STAFF">Govt Staff</option>
+                </select>
+
+                <button
+                  onClick={handleExportMemberReportCSV}
+                  className="px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition cursor-pointer"
+                  title="Export Member Fee CSV"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="hidden sm:inline">Export CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-[#f2f7f4] border-b border-slate-200/80 text-[11px] font-bold text-[#536b60] uppercase tracking-wider">
+                    <th className="py-3 px-4">MEMBER & ID</th>
+                    <th className="py-3 px-4">MEMBERSHIP</th>
+                    <th className="py-3 px-4">MONTHS PAID ({reportSummary?.year || 2026})</th>
+                    <th className="py-3 px-4">OVERDUE PERIOD</th>
+                    <th className="py-3 px-4">PAID THIS YEAR</th>
+                    <th className="py-3 px-4">PENDING DUES</th>
+                    <th className="py-3 px-4">FEE STATUS</th>
+                    <th className="py-3 px-4 text-right">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredMemberReport.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                        <p>No members found matching the selected filter criteria.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMemberReport.map((m) => (
+                      <tr key={m.id} className="hover:bg-slate-50/80 transition">
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-slate-900">{m.fullName}</div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="font-mono text-[11px] text-slate-500">{m.memberNo}</span>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-medium">
+                              {m.category.replace("_", " ")}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                m.status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"
+                              }`}
+                            />
+                            <span className="font-medium text-slate-700 capitalize">{m.status.toLowerCase()}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 mt-0.5">
+                            Expires: {new Date(m.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        </td>
+
+                        {/* Months Paid This Year (with 12-month visual indicator) */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center justify-between mb-1 gap-2">
+                            <span className="font-bold text-slate-800 tabular-nums">
+                              {m.monthsPaidThisYear} / 12 Months
+                            </span>
+                            <button
+                              onClick={() => setSelectedReportMember(m)}
+                              className="text-[10px] text-blue-600 hover:text-blue-800 font-medium cursor-pointer underline"
+                              title="View monthly grid details"
+                            >
+                              Details
+                            </button>
+                          </div>
+                          {/* 12-month mini indicator bar */}
+                          <div className="flex items-center gap-0.5 w-32">
+                            {m.monthlyBreakdown.map((mb) => (
+                              <div
+                                key={mb.month}
+                                className={`h-2 flex-1 rounded-xs transition ${
+                                  mb.paid ? "bg-emerald-500" : "bg-slate-200"
+                                }`}
+                                title={`${mb.name}: ${mb.paid ? "Paid" : "Unpaid"}`}
+                              />
+                            ))}
+                          </div>
+                        </td>
+
+                        {/* Overdue Period */}
+                        <td className="py-3.5 px-4">
+                          {m.monthsOverdue > 0 ? (
+                            <span className="inline-flex items-center gap-1 font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-0.5 rounded-full text-xs">
+                              <Clock className="w-3 h-3 text-rose-600" />
+                              <span>{m.monthsOverdue} Months Overdue</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>0 Months (Nil)</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Paid Amount This Year */}
+                        <td className="py-3.5 px-4 font-semibold text-slate-900 tabular-nums">
+                          ₹ {m.totalPaidThisYear.toLocaleString("en-IN")}
+                        </td>
+
+                        {/* Pending Dues */}
+                        <td className="py-3.5 px-4 tabular-nums">
+                          {m.outstandingDues > 0 ? (
+                            <span className="font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                              ₹ {m.outstandingDues}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">₹ 0</span>
+                          )}
+                        </td>
+
+                        {/* Fee Status */}
+                        <td className="py-3.5 px-4">
+                          {m.feeStatus === "PAID" && (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#e2f6ee] text-[#0d7a55] border border-emerald-200">
+                              Paid
+                            </span>
+                          )}
+                          {m.feeStatus === "OVERDUE" && (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#fee2e2] text-[#b91c1c] border border-rose-200">
+                              Overdue
+                            </span>
+                          )}
+                          {m.feeStatus === "PARTIALLY_PAID" && (
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                              Partially Paid
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                          {m.outstandingDues > 0 || m.feeStatus !== "PAID" ? (
+                            <button
+                              onClick={() => {
+                                setPayMember(m.memberNo);
+                                setPayAmount(m.outstandingDues > 0 ? m.outstandingDues.toString() : "50");
+                                setPayDesc(m.outstandingDues > 0 ? "Outstanding membership/due fees" : "Monthly/Annual membership fee");
+                                setPaymentModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-medium inline-flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                              title="Collect fee from this member"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Collect Fee</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setSelectedReportMember(m)}
+                              className="px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 font-medium inline-flex items-center gap-1 transition cursor-pointer"
+                              title="View monthly fee breakdown"
+                            >
+                              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Months</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="py-3 px-5 bg-slate-50/70 border-t border-slate-200/80 text-xs text-slate-500 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
+                <span>Government treasury member ledger covering active patrons and fiscal year compliance.</span>
+              </div>
+              <span className="font-mono text-[11px] text-slate-400">
+                FY {reportSummary?.year || 2026}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -1150,6 +1582,132 @@ export default function StaffFinancePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MEMBER MONTHLY FEE DETAILS MODAL */}
+      {selectedReportMember && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-700">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Monthly Fee Schedule</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Fiscal Year {reportSummary?.year || 2026} • {selectedReportMember.memberNo}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedReportMember(null)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Member Profile Card */}
+            <div className="p-3.5 bg-slate-50 rounded-xl space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-slate-900 text-sm">{selectedReportMember.fullName}</span>
+                <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-200/70 text-slate-700 font-medium">
+                  {selectedReportMember.memberNo}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2 text-slate-600 text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200">
+                  Category: <strong>{selectedReportMember.category.replace("_", " ")}</strong>
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200">
+                  Status: <strong>{selectedReportMember.status}</strong>
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white border border-slate-200">
+                  Valid Till: <strong>{new Date(selectedReportMember.expiryDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Metrics summary for this member */}
+            <div className="grid grid-cols-3 gap-2.5 text-center text-xs">
+              <div className="p-2.5 bg-emerald-50/60 border border-emerald-200/70 rounded-xl">
+                <div className="text-[10px] text-emerald-800 font-medium">Months Paid</div>
+                <div className="text-base font-bold text-emerald-700 mt-0.5">
+                  {selectedReportMember.monthsPaidThisYear} / 12
+                </div>
+              </div>
+              <div className="p-2.5 bg-blue-50/60 border border-blue-200/70 rounded-xl">
+                <div className="text-[10px] text-blue-800 font-medium">Fees Paid ({reportSummary?.year || 2026})</div>
+                <div className="text-base font-bold text-blue-700 mt-0.5">
+                  ₹ {selectedReportMember.totalPaidThisYear}
+                </div>
+              </div>
+              <div className="p-2.5 bg-rose-50/60 border border-rose-200/70 rounded-xl">
+                <div className="text-[10px] text-rose-800 font-medium">Overdue Duration</div>
+                <div className="text-base font-bold text-rose-700 mt-0.5">
+                  {selectedReportMember.monthsOverdue > 0 ? `${selectedReportMember.monthsOverdue} Mo` : "Nil"}
+                </div>
+              </div>
+            </div>
+
+            {/* 12 Months Grid */}
+            <div>
+              <p className="text-[11px] font-semibold text-slate-700 mb-2 uppercase tracking-wider">
+                Monthly Payment Breakdown (Jan – Dec {reportSummary?.year || 2026})
+              </p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {selectedReportMember.monthlyBreakdown.map((mb) => (
+                  <div
+                    key={mb.month}
+                    className={`p-2 rounded-xl border text-center transition ${
+                      mb.paid
+                        ? "bg-[#e2f6ee] border-emerald-300 text-[#0d7a55]"
+                        : "bg-slate-50 border-slate-200 text-slate-400"
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold">{mb.name}</div>
+                    <div className="mt-1 flex items-center justify-center">
+                      {mb.paid ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <span className="text-[10px] font-medium text-slate-400">Unpaid</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedReportMember(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+              {(selectedReportMember.outstandingDues > 0 || selectedReportMember.feeStatus !== "PAID") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const m = selectedReportMember;
+                    setSelectedReportMember(null);
+                    setPayMember(m.memberNo);
+                    setPayAmount(m.outstandingDues > 0 ? m.outstandingDues.toString() : "50");
+                    setPayDesc(m.outstandingDues > 0 ? "Outstanding membership/due fees" : "Monthly/Annual membership fee");
+                    setPaymentModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white text-xs font-semibold cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Collect Payment (₹{selectedReportMember.outstandingDues > 0 ? selectedReportMember.outstandingDues : "50"})</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

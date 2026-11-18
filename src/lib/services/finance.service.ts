@@ -583,3 +583,160 @@ export async function updatePayment(input: UpdatePaymentInput) {
     return updatedPayment;
   }, TX_OPTIONS);
 }
+
+export interface MemberFeeReportItem {
+  id: string;
+  memberNo: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  category: string;
+  status: string;
+  registrationDate: string;
+  expiryDate: string;
+  totalPaidLifetime: number;
+  totalPaidThisYear: number;
+  outstandingDues: number;
+  monthsPaidThisYear: number;
+  monthsOverdue: number;
+  feeStatus: "PAID" | "OVERDUE" | "PARTIALLY_PAID";
+  monthlyBreakdown: { month: number; name: string; paid: boolean }[];
+  chargesCount: number;
+  paymentsCount: number;
+}
+
+export interface MemberFeeReportSummary {
+  year: number;
+  totalMembers: number;
+  paidMembersCount: number;
+  overdueMembersCount: number;
+  partiallyPaidMembersCount: number;
+  totalCollectedThisYear: number;
+  totalOutstandingDues: number;
+}
+
+export async function getMemberFeeReport(targetYear?: number): Promise<{
+  summary: MemberFeeReportSummary;
+  members: MemberFeeReportItem[];
+}> {
+  const now = new Date();
+  const year = targetYear || now.getFullYear();
+
+  const members = await prisma.member.findMany({
+    include: {
+      payments: {
+        where: { status: "POSTED" },
+        orderBy: { createdAt: "asc" },
+      },
+      feeCharges: {
+        orderBy: { createdAt: "asc" },
+      },
+    },
+    orderBy: { fullName: "asc" },
+  });
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  let totalCollectedThisYear = 0;
+  let totalOutstandingDues = 0;
+  let paidMembersCount = 0;
+  let overdueMembersCount = 0;
+  let partiallyPaidMembersCount = 0;
+
+  const items: MemberFeeReportItem[] = members.map((m) => {
+    const totalPaidLifetime = m.payments.reduce((sum, p) => sum + p.amount, 0);
+    const yearPayments = m.payments.filter((p) => new Date(p.createdAt).getFullYear() === year);
+    const totalPaidThisYear = yearPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    const activeCharges = m.feeCharges.filter((c) =>
+      ["OUTSTANDING", "PARTIALLY_PAID"].includes(c.status)
+    );
+    const memberOutstanding = activeCharges.reduce((sum, c) => sum + c.balance, 0);
+
+    const expiry = new Date(m.expiryDate);
+
+    // Calculate months covered in target year (0 to 12)
+    let monthsPaidThisYear = 0;
+    if (expiry.getFullYear() > year) {
+      monthsPaidThisYear = 12;
+    } else if (expiry.getFullYear() === year) {
+      monthsPaidThisYear = Math.min(12, Math.max(0, expiry.getMonth() + 1));
+    } else {
+      monthsPaidThisYear = 0;
+    }
+
+    // Calculate months overdue
+    let monthsOverdue = 0;
+    if (expiry < now) {
+      const diffMonths = (now.getFullYear() - expiry.getFullYear()) * 12 + (now.getMonth() - expiry.getMonth());
+      monthsOverdue = Math.max(1, diffMonths);
+    } else if (memberOutstanding > 0) {
+      const oldestCharge = activeCharges[0];
+      if (oldestCharge) {
+        const cDate = new Date(oldestCharge.createdAt);
+        const diffChargeMonths = (now.getFullYear() - cDate.getFullYear()) * 12 + (now.getMonth() - cDate.getMonth());
+        monthsOverdue = Math.max(1, diffChargeMonths);
+      } else {
+        monthsOverdue = 1;
+      }
+    }
+
+    // Overall fee status
+    let feeStatus: "PAID" | "OVERDUE" | "PARTIALLY_PAID" = "PAID";
+    if (m.status === "EXPIRED" || monthsOverdue > 0 || memberOutstanding > 0) {
+      if (totalPaidThisYear > 0 && monthsPaidThisYear > 0 && memberOutstanding > 0) {
+        feeStatus = "PARTIALLY_PAID";
+        partiallyPaidMembersCount++;
+      } else {
+        feeStatus = "OVERDUE";
+        overdueMembersCount++;
+      }
+    } else {
+      feeStatus = "PAID";
+      paidMembersCount++;
+    }
+
+    totalCollectedThisYear += totalPaidThisYear;
+    totalOutstandingDues += memberOutstanding;
+
+    const monthlyBreakdown = monthNames.map((name, idx) => ({
+      month: idx + 1,
+      name,
+      paid: idx < monthsPaidThisYear,
+    }));
+
+    return {
+      id: m.id,
+      memberNo: m.memberNo,
+      fullName: m.fullName,
+      email: m.email,
+      phone: m.phone,
+      category: m.category,
+      status: m.status,
+      registrationDate: m.registrationDate.toISOString(),
+      expiryDate: m.expiryDate.toISOString(),
+      totalPaidLifetime,
+      totalPaidThisYear,
+      outstandingDues: memberOutstanding,
+      monthsPaidThisYear,
+      monthsOverdue,
+      feeStatus,
+      monthlyBreakdown,
+      chargesCount: m.feeCharges.length,
+      paymentsCount: m.payments.length,
+    };
+  });
+
+  return {
+    summary: {
+      year,
+      totalMembers: members.length,
+      paidMembersCount,
+      overdueMembersCount,
+      partiallyPaidMembersCount,
+      totalCollectedThisYear,
+      totalOutstandingDues,
+    },
+    members: items,
+  };
+}
