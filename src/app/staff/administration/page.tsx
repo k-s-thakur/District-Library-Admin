@@ -695,7 +695,7 @@ export default function StaffAdministrationPage() {
                     {staffList.length}
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium truncate">
-                    In Dakshin Bastar Dantewada
+                    In District Central Library
                   </span>
                 </div>
               </div>
@@ -898,7 +898,7 @@ export default function StaffAdministrationPage() {
                       <th className="py-3 px-4">OFFICIAL CREDENTIALS</th>
                       <th className="py-3 px-4">STATUS</th>
                       <th className="py-3 px-4">INSPECTIONS / DUTY</th>
-                      <th className="py-3 px-4 text-right">EDM ACTIONS</th>
+                      <th className="py-3 px-4 text-right">ACTIONS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -998,7 +998,7 @@ export default function StaffAdministrationPage() {
                               </span>
                             </td>
 
-                            {/* EDM Actions (Exact style of Image 3) */}
+                            {/* Staff Actions */}
                             <td className="py-3.5 px-4 text-right space-x-1">
                               <button
                                 onClick={() => setViewingStaff(staff)}
@@ -1193,7 +1193,7 @@ export default function StaffAdministrationPage() {
                     {staffList.length}
                   </span>
                   <span className="text-[11px] text-slate-500 font-medium truncate">
-                    In Dakshin Bastar Dantewada
+                    In District Central Library
                   </span>
                 </div>
               </div>
