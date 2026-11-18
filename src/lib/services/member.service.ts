@@ -298,3 +298,34 @@ export async function renewMembership(id: string, actorId?: string) {
     };
   }, TX_OPTIONS);
 }
+
+export async function resetMemberPassword(id: string, newPassword: string, actorId?: string) {
+  return await prisma.$transaction(async (tx) => {
+    const member = await tx.member.findUnique({ where: { id } });
+    if (!member) throw new Error(`Member with ID "${id}" was not found.`);
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const updated = await tx.member.update({
+      where: { id },
+      data: { passwordHash },
+    });
+
+    if (actorId) {
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: "MEMBER_PASSWORD_RESET",
+          entityType: "Member",
+          entityId: id,
+          metadataJson: JSON.stringify({
+            memberNo: member.memberNo,
+            resetBy: actorId,
+          }),
+        },
+      });
+    }
+
+    return updated;
+  }, TX_OPTIONS);
+}
+

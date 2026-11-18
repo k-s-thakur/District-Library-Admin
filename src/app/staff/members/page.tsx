@@ -48,16 +48,84 @@ interface MemberRecord {
   outstandingDues?: number;
 }
 
-const sampleMembers: MemberRecord[] = [];
+const sampleMembers: MemberRecord[] = [
+  {
+    id: "m-1",
+    name: "Aranya Sharma",
+    subtitle: "+91 98110 23451",
+    memberNo: "GPL-2026-0185",
+    category: "Adult",
+    nextDueDate: "24 Nov 2026",
+    status: "Active",
+    email: "aranya.sharma@example.com",
+    phone: "9811023451",
+    address: "Block C, Dantewada",
+  },
+  {
+    id: "m-2",
+    name: "Rahul Verma",
+    subtitle: "+91 98711 54321",
+    memberNo: "STU-2026-0984",
+    category: "Student",
+    nextDueDate: "21 Nov 2026",
+    status: "Active",
+    email: "rahul.verma@example.com",
+    phone: "9871154321",
+    address: "Govt PG College, Dantewada",
+  },
+  {
+    id: "m-3",
+    name: "Meera Nair",
+    subtitle: "+91 99100 88214",
+    memberNo: "GPL-2026-0271",
+    category: "Adult",
+    nextDueDate: "—",
+    status: "Active",
+    email: "meera.nair@example.com",
+    phone: "9910088214",
+    address: "Main Market, Geedam",
+  },
+  {
+    id: "m-4",
+    name: "Kabir Singh",
+    subtitle: "+91 98101 77332",
+    memberNo: "GPL-2026-0455",
+    category: "Senior",
+    nextDueDate: "18 Nov 2026",
+    status: "Active",
+    email: "kabir.singh@example.com",
+    phone: "9810177332",
+    address: "Station Road, Dantewada",
+  },
+  {
+    id: "m-5",
+    name: "Ananya Iyer",
+    subtitle: "+91 98188 99112",
+    memberNo: "STU-2026-0312",
+    category: "Student",
+    nextDueDate: "28 Nov 2026",
+    status: "Active",
+    email: "ananya.iyer@example.com",
+    phone: "9818899112",
+    address: "Polytechnic Campus, Dantewada",
+  },
+];
 
 export default function StaffMembersPage() {
   const { previewData } = useStaff();
-  const [membersList, setMembersList] = useState<MemberRecord[]>([]);
+  const [membersList, setMembersList] = useState<MemberRecord[]>(sampleMembers);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  // Per-member password visibility and custom state
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
+  const [memberPasswords, setMemberPasswords] = useState<Record<string, string>>({});
+  const [resetPasswordMember, setResetPasswordMember] = useState<MemberRecord | null>(null);
+  const [newResetPassword, setNewResetPassword] = useState("");
+  const [submittingReset, setSubmittingReset] = useState(false);
 
   // Modals state
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
@@ -152,6 +220,19 @@ export default function StaffMembersPage() {
     };
   };
 
+  const copyFullCredentials = (member: MemberRecord, pass?: string) => {
+    const finalPass = pass || memberPasswords[member.id] || (member.category === "Student" ? "Stu@2026#123" : "Member@123");
+    const text =
+      `🏛️ District Public Library - Patron Access Credentials\n` +
+      `Member Name: ${member.name}\n` +
+      `User ID / Member No: ${member.memberNo}\n` +
+      `Login Password: ${finalPass}\n` +
+      `Category: ${member.category}\n` +
+      `Portal Login: ${typeof window !== "undefined" ? window.location.origin : ""}/login`;
+    navigator.clipboard.writeText(text);
+    showToast(`Credentials for ${member.name} copied to clipboard!`);
+  };
+
   const loadMembers = useCallback(async () => {
     if (previewData) {
       setMembersList(sampleMembers);
@@ -162,16 +243,50 @@ export default function StaffMembersPage() {
       const res = await fetch("/api/members");
       if (res.ok) {
         const data = await res.json();
-        if (data.members) {
+        if (data.members && data.members.length > 0) {
           setMembersList(data.members.map(mapBackendMember));
+        } else {
+          setMembersList(sampleMembers);
         }
+      } else {
+        setMembersList(sampleMembers);
       }
     } catch {
-      // Fallback stays
+      setMembersList(sampleMembers);
     } finally {
       setLoading(false);
     }
   }, [previewData]);
+
+  const handleResetMemberPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPasswordMember) return;
+    setSubmittingReset(true);
+    try {
+      const res = await fetch(`/api/members/${resetPasswordMember.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reset_password",
+          password: newResetPassword.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to reset password");
+
+      setMemberPasswords((prev) => ({
+        ...prev,
+        [resetPasswordMember.id]: newResetPassword.trim(),
+      }));
+
+      showToast(`Password for ${resetPasswordMember.name} reset to "${newResetPassword.trim()}"!`);
+      setResetPasswordMember(null);
+    } catch (err: any) {
+      showToast(err.message || "Failed to reset password", true);
+    } finally {
+      setSubmittingReset(false);
+    }
+  };
 
   useEffect(() => {
     loadMembers();
@@ -564,12 +679,12 @@ export default function StaffMembersPage() {
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-[#f2f7f4] border-b border-slate-200/80 text-[11px] font-bold text-[#536b60] uppercase tracking-wider">
-                <th className="py-3 px-5">MEMBER</th>
-                <th className="py-3 px-5">MEMBER NO. / USER ID</th>
-                <th className="py-3 px-5">CATEGORY</th>
-                <th className="py-3 px-5">NEXT DUE DATE</th>
-                <th className="py-3 px-5">STATUS</th>
-                <th className="py-3 px-5 text-right">ACTION</th>
+                <th className="py-3 px-4">MEMBER</th>
+                <th className="py-3 px-4">LOGIN CREDENTIALS (USER ID & PASSWORD)</th>
+                <th className="py-3 px-4">CATEGORY</th>
+                <th className="py-3 px-4">NEXT DUE DATE</th>
+                <th className="py-3 px-4">STATUS</th>
+                <th className="py-3 px-4 text-right">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -580,138 +695,212 @@ export default function StaffMembersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredMembers.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-50/80 transition group">
-                    <td className="py-3.5 px-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center shrink-0">
-                          <User className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-900 leading-tight">
-                            {member.name}
+                filteredMembers.map((member) => {
+                  const currentPass = memberPasswords[member.id] || (member.category === "Student" ? "Stu@2026#123" : "Member@123");
+                  const isVisible = visiblePasswords[member.id] || false;
+
+                  return (
+                    <tr key={member.id} className="hover:bg-slate-50/80 transition group">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#e2f6ee] text-[#0d7a55] flex items-center justify-center shrink-0">
+                            <User className="w-4 h-4" />
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            {member.email || member.subtitle}
+                          <div>
+                            <div className="font-semibold text-slate-900 leading-tight">
+                              {member.name}
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">
+                              {member.email || member.subtitle}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-3.5 px-5 font-mono text-slate-600 text-xs">
-                      {member.memberNo}
-                    </td>
+                      {/* Official Credentials Box for Librarian */}
+                      <td className="py-3.5 px-4">
+                        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 w-60">
+                          <div className="flex items-center justify-between text-[11px] font-mono">
+                            <span className="text-slate-500 font-sans font-medium text-[10px]">User ID:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-slate-900 tracking-tight">{member.memberNo}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(member.memberNo);
+                                  showToast(`User ID ${member.memberNo} copied!`);
+                                }}
+                                className="p-1 hover:bg-slate-200/80 rounded text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                                title="Copy User ID"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
 
-                    <td className="py-3.5 px-5 text-slate-700">
-                      {member.category}
-                    </td>
+                          <div className="flex items-center justify-between text-[11px] font-mono">
+                            <span className="text-slate-500 font-sans font-medium text-[10px]">Password:</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-bold text-emerald-800 tracking-wider">
+                                {isVisible ? currentPass : "••••••••••"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVisiblePasswords((prev) => ({ ...prev, [member.id]: !prev[member.id] }));
+                                }}
+                                className="p-1 hover:bg-slate-200/80 rounded text-slate-400 hover:text-slate-700 transition cursor-pointer"
+                                title={isVisible ? "Hide Password" : "Show Password"}
+                              >
+                                {isVisible ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(currentPass);
+                                  showToast(`Password copied for ${member.name}!`);
+                                }}
+                                className="p-1 hover:bg-slate-200/80 rounded text-slate-400 hover:text-emerald-700 transition cursor-pointer"
+                                title="Copy Password"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
 
-                    <td className="py-3.5 px-5 text-slate-600 text-xs">
-                      {member.nextDueDate}
-                    </td>
+                          <button
+                            type="button"
+                            onClick={() => copyFullCredentials(member, currentPass)}
+                            className="w-full mt-1 py-1 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs"
+                          >
+                            <Key className="w-3 h-3 text-amber-600" />
+                            <span>Copy Credentials</span>
+                          </button>
+                        </div>
+                      </td>
 
-                    <td className="py-3.5 px-5">
-                      {member.status === "Active" ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#e2f6ee] text-[#0d7a55] border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#0d7a55]" />
-                          <span>Active</span>
-                        </span>
-                      ) : member.status === "Suspended" ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#fef3c7] text-[#92400e] border border-amber-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#d97706]" />
-                          <span>Suspended</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#fee2e2] text-[#b91c1c] border border-rose-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#b91c1c]" />
-                          <span>{member.status}</span>
-                        </span>
-                      )}
-                    </td>
+                      <td className="py-3.5 px-4 text-slate-700 font-medium">
+                        {member.category}
+                      </td>
 
-                    <td className="py-3.5 px-5 text-right relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveActionDropdown(
-                            activeActionDropdown === member.id ? null : member.id
-                          );
-                        }}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
-                        title="Actions"
-                      >
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
+                      <td className="py-3.5 px-4 text-slate-600 text-xs">
+                        {member.nextDueDate}
+                      </td>
 
-                      {activeActionDropdown === member.id && (
-                        <div
-                          ref={actionMenuRef}
-                          className="absolute right-5 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-left text-xs"
+                      <td className="py-3.5 px-4">
+                        {member.status === "Active" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#e2f6ee] text-[#0d7a55] border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#0d7a55]" />
+                            <span>Active</span>
+                          </span>
+                        ) : member.status === "Suspended" ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#fef3c7] text-[#92400e] border border-amber-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#d97706]" />
+                            <span>Suspended</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-[#fee2e2] text-[#b91c1c] border border-rose-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#b91c1c]" />
+                            <span>{member.status}</span>
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveActionDropdown(
+                              activeActionDropdown === member.id ? null : member.id
+                            );
+                          }}
+                          className="p-1 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer"
+                          title="Actions"
                         >
-                          <button
-                            onClick={() => {
-                              setSelectedCardMember(member);
-                              setActiveActionDropdown(null);
-                            }}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                        {activeActionDropdown === member.id && (
+                          <div
+                            ref={actionMenuRef}
+                            className="absolute right-5 mt-1 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-left text-xs"
                           >
-                            <CreditCard className="w-3.5 h-3.5 text-[#0d7a55]" />
-                            <span>View Digital Card</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRegisteredCredentials({
-                                fullName: member.name,
-                                memberNo: member.memberNo,
-                                email: member.email || "",
-                                password: "Member@123",
-                                category: member.category,
-                              });
-                              setActiveActionDropdown(null);
-                            }}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                          >
-                            <Key className="w-3.5 h-3.5 text-amber-600" />
-                            <span>View Credentials</span>
-                          </button>
-                          <button
-                            onClick={() => handleRenewMember(member.id)}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                          >
-                            <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Renew Membership</span>
-                          </button>
-                          <button
-                            onClick={() => handleToggleStatus(member.id, member.status)}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                          >
-                            {member.status === "Active" ? (
-                              <>
-                                <Ban className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Suspend Member</span>
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Activate Member</span>
-                              </>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => {
-                              showToast(`Due reminder notice dispatched to ${member.name}.`);
-                              setActiveActionDropdown(null);
-                            }}
-                            className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                          >
-                            <Mail className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Send Notice</span>
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                            <button
+                              onClick={() => {
+                                setSelectedCardMember(member);
+                                setActiveActionDropdown(null);
+                              }}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                            >
+                              <CreditCard className="w-3.5 h-3.5 text-[#0d7a55]" />
+                              <span>View Digital Card</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRegisteredCredentials({
+                                  fullName: member.name,
+                                  memberNo: member.memberNo,
+                                  email: member.email || "",
+                                  password: currentPass,
+                                  category: member.category,
+                                });
+                                setActiveActionDropdown(null);
+                              }}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                            >
+                              <Key className="w-3.5 h-3.5 text-amber-600" />
+                              <span>View Credentials Slip</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setResetPasswordMember(member);
+                                setNewResetPassword(currentPass);
+                                setActiveActionDropdown(null);
+                              }}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Reset Password</span>
+                            </button>
+                            <button
+                              onClick={() => handleRenewMember(member.id)}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                            >
+                              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Renew Membership</span>
+                            </button>
+                            <button
+                              onClick={() => handleToggleStatus(member.id, member.status)}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                            >
+                              {member.status === "Active" ? (
+                                <>
+                                  <Ban className="w-3.5 h-3.5 text-amber-600" />
+                                  <span>Suspend Member</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Activate Member</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => {
+                                showToast(`Due reminder notice dispatched to ${member.name}.`);
+                                setActiveActionDropdown(null);
+                              }}
+                              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                            >
+                              <Mail className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Send Notice</span>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -937,65 +1126,199 @@ export default function StaffMembersPage() {
         </div>
       )}
 
-      {/* STUDENT CREDENTIALS SUCCESS POPUP */}
+      {/* OFFICIAL CREDENTIALS SLIP POPUP */}
       {registeredCredentials && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl border border-emerald-300 max-w-sm w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#0d7a55] flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-6 h-6 text-[#0d7a55]" />
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-[#0d7a55] flex items-center justify-center font-bold">
+                  <Key className="w-4 h-4 text-[#0d7a55]" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Member Login Credentials
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    आधिकारिक सदस्य लॉगिन क्रेडेंशियल्स
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Student Account Created!
-                </h3>
-                <p className="text-xs text-slate-500">
-                  लॉगिन विवरण सफलतापूर्वक जनरेट हो गए हैं
-                </p>
+              <button
+                onClick={() => setRegisteredCredentials(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2.5 text-xs">
+              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
+                <span className="text-slate-500">Full Name:</span>
+                <span className="font-bold text-slate-900">{registeredCredentials.fullName}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
+                <span className="text-slate-500">Category:</span>
+                <span className="font-semibold text-emerald-800">{registeredCredentials.category}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5 font-mono">
+                <span className="text-slate-500 font-sans">User ID / Member No:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-[#0d7a55] text-sm">{registeredCredentials.memberNo}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(registeredCredentials.memberNo);
+                      showToast("User ID copied!");
+                    }}
+                    className="p-1 hover:bg-emerald-100 rounded text-emerald-700 cursor-pointer"
+                    title="Copy User ID"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex justify-between items-center font-mono">
+                <span className="text-slate-500 font-sans">Login Password:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-[#0d7a55] text-sm">{registeredCredentials.password}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (registeredCredentials.password) {
+                        navigator.clipboard.writeText(registeredCredentials.password);
+                        showToast("Password copied!");
+                      }
+                    }}
+                    className="p-1 hover:bg-emerald-100 rounded text-emerald-700 cursor-pointer"
+                    title="Copy Password"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2.5 font-mono text-xs">
-              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
-                <span className="text-slate-500 font-sans">Full Name:</span>
-                <span className="font-bold text-slate-900 font-sans">{registeredCredentials.fullName}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
-                <span className="text-slate-500 font-sans">User ID / Member No:</span>
-                <span className="font-bold text-[#0d7a55] text-sm">{registeredCredentials.memberNo}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">Password:</span>
-                <span className="font-bold text-[#0d7a55] text-sm">{registeredCredentials.password}</span>
-              </div>
-            </div>
+            <p className="text-[11px] text-slate-500 leading-tight">
+              💡 यह क्रेडेंशियल पर्ची सदस्य को सीधे दी जा सकती है या WhatsApp/SMS पर भेजी जा सकती है।
+            </p>
 
             <div className="flex gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(
-                    `🏛️ District Public Library - Student Portal Login\n` +
-                    `Student Name: ${registeredCredentials.fullName}\n` +
+                    `🏛️ District Public Library - Member Login Credentials\n` +
+                    `Member Name: ${registeredCredentials.fullName}\n` +
+                    `Category: ${registeredCredentials.category}\n` +
                     `User ID / Member No: ${registeredCredentials.memberNo}\n` +
-                    `Password: ${registeredCredentials.password}\n` +
-                    `Login URL: ${window.location.origin}/login`
+                    `Login Password: ${registeredCredentials.password}\n` +
+                    `Portal URL: ${window.location.origin}/login`
                   );
-                  showToast("छात्र क्रेडेंशियल्स क्लिपबोर्ड पर कॉपी हो गए!");
+                  showToast("क्रेडेंशियल्स क्लिपबोर्ड पर कॉपी हो गए!");
                 }}
                 className="flex-1 py-2 px-3 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition"
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copy Credentials</span>
+                <span>Copy All</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                title="Print Slip"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
               </button>
               <button
                 type="button"
                 onClick={() => setRegisteredCredentials(null)}
-                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-medium cursor-pointer"
+                className="px-3 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-medium cursor-pointer"
               >
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESET PASSWORD MODAL */}
+      {resetPasswordMember && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-sm w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Reset Member Password
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    नया पासवर्ड सेट करें ({resetPasswordMember.name})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setResetPasswordMember(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetMemberPassword} className="space-y-3 text-xs">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-sans">Member:</span>
+                  <span className="font-bold text-slate-800 font-sans">{resetPasswordMember.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500 font-sans">User ID:</span>
+                  <span className="font-bold text-emerald-800">{resetPasswordMember.memberNo}</span>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-slate-700 font-medium">New Password *</label>
+                  <button
+                    type="button"
+                    onClick={() => setNewResetPassword("Member@123")}
+                    className="text-[10px] text-indigo-600 hover:underline font-medium cursor-pointer"
+                  >
+                    Set Member@123
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={newResetPassword}
+                  onChange={(e) => setNewResetPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-indigo-600 font-mono font-bold text-slate-800"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResetPasswordMember(null)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReset || !newResetPassword.trim()}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {submittingReset ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

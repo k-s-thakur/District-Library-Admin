@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { getMemberDetails, updateMember, renewMembership } from "@/lib/services/member.service";
+import { getMemberDetails, updateMember, renewMembership, resetMemberPassword } from "@/lib/services/member.service";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -65,6 +65,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (body.action === "renew") {
       const renewed = await renewMembership(id, session.id);
       return NextResponse.json({ success: true, member: renewed, message: "Membership renewed for 1 academic year" });
+    }
+
+    if (body.action === "reset_password" || body.password) {
+      const newPassword = body.password || "Member@123";
+      const updated = await resetMemberPassword(id, newPassword, session.id);
+      return NextResponse.json({
+        success: true,
+        member: updated,
+        message: `Password reset to "${newPassword}" successfully`,
+      });
     }
 
     const updated = await updateMember(id, body, session.id);
