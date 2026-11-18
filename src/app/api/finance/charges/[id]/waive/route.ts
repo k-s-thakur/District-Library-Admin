@@ -5,9 +5,9 @@ import { waiveCharge } from "@/lib/services/finance.service";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "APPROVING_OFFICER", "LIBRARY_ADMIN"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Approving Officer / Supervisor sanction required to waive charges." },
+        { error: "Unauthorized. Super Admin sanction required to waive charges." },
         { status: 403 }
       );
     }

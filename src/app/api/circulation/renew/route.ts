@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Role verification
-    const isStaff = ["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN"].includes(session.role);
+    const isStaff = ["SUPER_ADMIN", "LIBRARIAN"].includes(session.role);
     if (!isStaff) {
       // Member can only renew their own loan
       const targetLoan = await prisma.loan.findUnique({

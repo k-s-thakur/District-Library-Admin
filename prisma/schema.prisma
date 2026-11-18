@@ -13,7 +13,7 @@ model StaffUser {
   email        String     @unique
   passwordHash String
   name         String
-  role         String     @default("LIBRARIAN") // SUPER_ADMIN, LIBRARY_ADMIN, LIBRARIAN, ACCOUNTS_OPERATOR, APPROVING_OFFICER
+  role         String     @default("LIBRARIAN") // SUPER_ADMIN, LIBRARIAN
   status       String     @default("ACTIVE")    // ACTIVE, SUSPENDED
   phone        String?
   createdAt    DateTime   @default(now())

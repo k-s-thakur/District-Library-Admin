@@ -50,10 +50,7 @@ The system is built on a **Dual-Portal, Single-Authoritative-Backend** architect
 | Role | Catalog & Copies | Circulation (Issue/Return) | Cashier Payments | Fine Waiver | Payment Reversal | Policies & Audit |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **SUPER_ADMIN** | Full | Full | Full | ✅ Full Sanction | ✅ Authorized | Full |
-| **APPROVING_OFFICER** | Read | Read | Read | ✅ Full Sanction | ✅ Authorized | Audit Only |
-| **LIBRARY_ADMIN** | Full | Full | View | ❌ Blocked | ❌ Blocked | Full |
-| **LIBRARIAN** | Full | Full | ❌ Blocked | ❌ Blocked | ❌ Blocked | Read Only |
-| **ACCOUNTS_OPERATOR** | Read | Read | ✅ Post / Reprint | ❌ Blocked | ❌ Blocked | Read Only |
+| **LIBRARIAN** | Full | Full | Full | ❌ Admin Sanction Required | ❌ Admin Auth Required | View Only |
 | **MEMBER** | Read Public | ❌ Blocked | ❌ Blocked | ❌ Blocked | ❌ Blocked | ❌ Blocked |
 
 ---

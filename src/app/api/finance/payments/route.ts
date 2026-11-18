@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
-    const isStaff = ["SUPER_ADMIN", "LIBRARY_ADMIN", "ACCOUNTS_OPERATOR"].includes(session.role);
+    const isStaff = ["SUPER_ADMIN", "LIBRARIAN"].includes(session.role);
 
     if (!isStaff) {
       if (session.role !== "MEMBER" || !session.memberId) {
@@ -53,9 +53,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json(
-        { error: "Unauthorized. Accounts Operator or Admin privileges required to post payments." },
+        { error: "Unauthorized. Staff privileges required to post payments." },
         { status: 403 }
       );
     }
@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json(
-        { error: "Unauthorized. Accounts Operator or Admin privileges required to edit payments." },
+        { error: "Unauthorized. Staff privileges required to edit payments." },
         { status: 403 }
       );
     }

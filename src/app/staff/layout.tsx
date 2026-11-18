@@ -210,8 +210,7 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
   const demoRoles = [
     { role: "MEMBER", label: "Citizen", path: "/" },
     { role: "LIBRARIAN", label: "Librarian", path: "/staff/circulation" },
-    { role: "ACCOUNTS_OPERATOR", label: "Accounts", path: "/staff/finance" },
-    { role: "SUPER_ADMIN", label: "Admin", path: "/staff/administration" },
+    { role: "SUPER_ADMIN", label: "Super Admin", path: "/staff/administration" },
   ];
 
   const handleRoleSwitch = async (role: string, path: string) => {
@@ -371,11 +370,9 @@ function StaffLayoutInner({ children }: { children: React.ReactNode }) {
                   <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#e2f6ee] text-[#0d7a55]">
                     {currentUser?.role === "SUPER_ADMIN"
                       ? "Super Admin"
-                      : currentUser?.role === "ACCOUNTS_OPERATOR"
-                      ? "Accounts Operator"
                       : currentUser?.role === "MEMBER"
                       ? "Citizen Member"
-                      : "Library Administrator"}
+                      : "Librarian"}
                   </span>
                 </div>
               </div>

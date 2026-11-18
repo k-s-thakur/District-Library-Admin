@@ -130,7 +130,7 @@ export interface Member {
   totalOutstandingDues: number;
 }
 
-export type Role = "MEMBER" | "LIBRARIAN" | "ACCOUNTS_OPERATOR" | "SUPER_ADMIN" | "LIBRARY_ADMIN" | "APPROVING_OFFICER";
+export type Role = "MEMBER" | "LIBRARIAN" | "SUPER_ADMIN";
 
 export interface User {
   id: string;

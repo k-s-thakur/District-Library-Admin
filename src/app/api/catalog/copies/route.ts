@@ -5,7 +5,7 @@ import { listAccessionRegister, addBookCopy, generateNextAccessionNo } from "@/l
 export async function GET(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Staff privileges required to view accession register." }, { status: 403 });
     }
 
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Librarian privileges required to accession copies." }, { status: 403 });
     }
 

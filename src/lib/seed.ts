@@ -50,32 +50,11 @@ export async function seedDatabase() {
         phone: "+91-9811002233",
       },
       {
-        email: "admin@library.gov.in",
-        passwordHash: staffPassword,
-        name: "Smt. Sunita Mukherjee",
-        role: "LIBRARY_ADMIN",
-        phone: "+91-9811002234",
-      },
-      {
         email: "librarian@library.gov.in",
         passwordHash: staffPassword,
         name: "Devendra Patel",
         role: "LIBRARIAN",
         phone: "+91-9811002235",
-      },
-      {
-        email: "accounts@library.gov.in",
-        passwordHash: staffPassword,
-        name: "Manoj Agarwal",
-        role: "ACCOUNTS_OPERATOR",
-        phone: "+91-9811002236",
-      },
-      {
-        email: "approver@library.gov.in",
-        passwordHash: staffPassword,
-        name: "Rajeshwar Rao",
-        role: "APPROVING_OFFICER",
-        phone: "+91-9811002237",
       },
     ],
   });

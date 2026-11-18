@@ -5,7 +5,7 @@ import { renewMembership } from "@/lib/services/member.service";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Staff privileges required to renew membership." }, { status: 403 });
     }
 

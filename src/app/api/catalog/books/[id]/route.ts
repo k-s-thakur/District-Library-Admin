@@ -15,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Staff privileges required." }, { status: 403 });
     }
 
@@ -32,8 +32,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN"].includes(session.role)) {
-      return NextResponse.json({ error: "Unauthorized. Library Admin privileges required to delete books." }, { status: 403 });
+    if (!session || session.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ error: "Unauthorized. Super Admin privileges required to delete books." }, { status: 403 });
     }
 
     const { id } = await params;

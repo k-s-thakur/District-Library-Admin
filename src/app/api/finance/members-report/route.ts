@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
-    const allowedRoles = ["SUPER_ADMIN", "LIBRARY_ADMIN", "ACCOUNTS_OPERATOR", "LIBRARIAN", "APPROVING_OFFICER"];
+    const allowedRoles = ["SUPER_ADMIN", "LIBRARIAN"];
     if (!allowedRoles.includes(session.role)) {
       return NextResponse.json(
         { error: "Unauthorized. Staff privileges required to access member fee reports." },

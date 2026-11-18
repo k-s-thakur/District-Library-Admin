@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "APPROVING_OFFICER"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Audit log inspection requires Administrative or Approving Officer privileges." },
+        { error: "Unauthorized. Audit log inspection requires Super Admin privileges." },
         { status: 403 }
       );
     }

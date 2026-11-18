@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    const isStaff = ["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN", "ACCOUNTS_OPERATOR"].includes(session.role);
+    const isStaff = ["SUPER_ADMIN", "LIBRARIAN"].includes(session.role);
 
     // If citizen/member, can ONLY query their own account
     if (!isStaff && session.memberId !== id) {
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Staff privileges required to update members." }, { status: 403 });
     }
 
@@ -55,7 +55,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Staff privileges required." }, { status: 403 });
     }
 

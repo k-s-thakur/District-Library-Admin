@@ -5,9 +5,9 @@ import { reversePayment } from "@/lib/services/finance.service";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "APPROVING_OFFICER"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Approving Officer or Super Admin authorization is required to reverse transactions." },
+        { error: "Unauthorized. Super Admin authorization is required to reverse transactions." },
         { status: 403 }
       );
     }

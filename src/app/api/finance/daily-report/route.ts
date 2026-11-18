@@ -5,9 +5,9 @@ import { getDailyCollectionReport } from "@/lib/services/finance.service";
 export async function GET(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "APPROVING_OFFICER", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json(
-        { error: "Unauthorized. Staff or Supervisor privileges required to access collection reports." },
+        { error: "Unauthorized. Staff privileges required to access collection reports." },
         { status: 403 }
       );
     }

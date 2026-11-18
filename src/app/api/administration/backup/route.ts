@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Super Admin or Library Admin role required to export database backup." },
+        { error: "Unauthorized. Super Admin role required to export database backup." },
         { status: 403 }
       );
     }

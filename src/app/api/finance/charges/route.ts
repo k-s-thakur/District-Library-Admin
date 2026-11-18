@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const memberId = searchParams.get("memberId");
     const status = searchParams.get("status");
-    const isStaff = ["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN", "ACCOUNTS_OPERATOR"].includes(session.role);
+    const isStaff = ["SUPER_ADMIN", "LIBRARIAN"].includes(session.role);
 
     if (!isStaff) {
       if (session.role !== "MEMBER" || !session.memberId) {
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json({ error: "Unauthorized. Staff privileges required to assess charges." }, { status: 403 });
     }
 

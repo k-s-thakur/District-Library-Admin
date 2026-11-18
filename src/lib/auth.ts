@@ -8,10 +8,7 @@ const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_STRING);
 
 export type UserRole =
   | "SUPER_ADMIN"
-  | "LIBRARY_ADMIN"
   | "LIBRARIAN"
-  | "ACCOUNTS_OPERATOR"
-  | "APPROVING_OFFICER"
   | "MEMBER"
   | "PUBLIC_VISITOR";
 

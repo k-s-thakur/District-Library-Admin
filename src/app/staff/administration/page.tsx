@@ -79,44 +79,17 @@ const LIBRARY_ROLES: RoleDefinition[] = [
     name: "Super Administrator",
     department: "Administrative Directorate",
     accessLevel: "Full Control",
-    description: "Complete unconstrained authority over all modules, staff provisioning, backups, policy governance and system audits.",
-    updatedDate: "10/11/2026",
-    status: "Active",
-  },
-  {
-    code: "LIBRARY_ADMIN",
-    name: "Library Administrator",
-    department: "Executive Management",
-    accessLevel: "Full Control",
-    description: "Oversees daily library workflows, catalogue acquisition, staff delegations, membership quotas and analytics.",
-    updatedDate: "10/11/2026",
+    description: "Complete authority over system governance, policies, staff onboarding, backups, fine waivers and system audits.",
+    updatedDate: "18/11/2026",
     status: "Active",
   },
   {
     code: "LIBRARIAN",
-    name: "Circulation Librarian",
-    department: "Circulation & Public Stacks",
+    name: "Librarian",
+    department: "Library Operations & Circulation",
     accessLevel: "Circulation Desk",
-    description: "Operates front circulation counter: book issuing, returns, barcode scanning, member enrolment, renewals and catalog lookups.",
-    updatedDate: "10/11/2026",
-    status: "Active",
-  },
-  {
-    code: "ACCOUNTS_OPERATOR",
-    name: "Accounts Operator",
-    department: "Finance & Treasury Desk",
-    accessLevel: "Finance & Accounts",
-    description: "Collects patron fines, lost book recoveries, assesses membership renewal fees and issues official treasury receipts.",
-    updatedDate: "10/11/2026",
-    status: "Active",
-  },
-  {
-    code: "APPROVING_OFFICER",
-    name: "Approving Officer",
-    department: "Supervisory & Audit Wing",
-    accessLevel: "Supervisory Approvals",
-    description: "Empowered to sanction fine waivers, authorize payment reversals, reconcile discrepancies and sign audit statements.",
-    updatedDate: "10/11/2026",
+    description: "Operates front circulation counter: book issuing, returns, barcode scanning, renewals, reservations, catalogue acquisitions, member enrolment and fee collections.",
+    updatedDate: "18/11/2026",
     status: "Active",
   },
 ];
@@ -467,16 +440,9 @@ export default function StaffAdministrationPage() {
     switch (role) {
       case "SUPER_ADMIN":
         return { wing: "Administrative Directorate", jurisdiction: "District Central Library", badgeColor: "bg-purple-100 text-purple-800 border-purple-200" };
-      case "LIBRARY_ADMIN":
-        return { wing: "Executive Management", jurisdiction: "District Central Library", badgeColor: "bg-blue-100 text-blue-800 border-blue-200" };
       case "LIBRARIAN":
-        return { wing: "Circulation & Stacks", jurisdiction: "Circulation Desk Counter", badgeColor: "bg-teal-100 text-teal-800 border-teal-200" };
-      case "ACCOUNTS_OPERATOR":
-        return { wing: "Finance & Treasury", jurisdiction: "Fee & Revenue Counter", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200" };
-      case "APPROVING_OFFICER":
-        return { wing: "Supervisory & Audit", jurisdiction: "Executive Oversight Office", badgeColor: "bg-amber-100 text-amber-800 border-amber-200" };
       default:
-        return { wing: "General Operations", jurisdiction: "District Central Library", badgeColor: "bg-slate-100 text-slate-800 border-slate-200" };
+        return { wing: "Library Operations & Circulation", jurisdiction: "Circulation Desk Counter", badgeColor: "bg-teal-100 text-teal-800 border-teal-200" };
     }
   };
 
@@ -484,12 +450,7 @@ export default function StaffAdministrationPage() {
     switch (role) {
       case "SUPER_ADMIN":
         return "bg-purple-50 text-purple-700 border border-purple-200";
-      case "APPROVING_OFFICER":
-        return "bg-amber-50 text-amber-800 border border-amber-200";
-      case "LIBRARY_ADMIN":
-        return "bg-blue-50 text-blue-700 border border-blue-200";
-      case "ACCOUNTS_OPERATOR":
-        return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+      case "LIBRARIAN":
       default:
         return "bg-teal-50 text-teal-700 border border-teal-200";
     }
@@ -843,12 +804,9 @@ export default function StaffAdministrationPage() {
                   onChange={(e) => setStaffRoleFilter(e.target.value)}
                   className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-[#0d7a55]"
                 >
-                  <option value="ALL">All Departments (5)</option>
-                  <option value="SUPER_ADMIN">Administrative Directorate</option>
-                  <option value="LIBRARY_ADMIN">Executive Management</option>
-                  <option value="LIBRARIAN">Circulation & Stacks</option>
-                  <option value="ACCOUNTS_OPERATOR">Finance & Treasury</option>
-                  <option value="APPROVING_OFFICER">Supervisory & Audit</option>
+                  <option value="ALL">All Roles (2)</option>
+                  <option value="SUPER_ADMIN">Super Administrator</option>
+                  <option value="LIBRARIAN">Librarian</option>
                 </select>
 
                 <div className="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200">
@@ -1671,11 +1629,8 @@ export default function StaffAdministrationPage() {
                   onChange={(e) => setNewStaffRole(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-blue-600 bg-white text-xs font-medium"
                 >
-                  <option value="LIBRARIAN">Librarian (Circulation Desk & Inventory Operations)</option>
-                  <option value="ACCOUNTS_OPERATOR">Accounts Operator (Fee Collection & Receipting)</option>
-                  <option value="APPROVING_OFFICER">Approving Officer (Fine Waivers & Payment Reversals)</option>
-                  <option value="LIBRARY_ADMIN">Library Admin (Management & Cataloging Oversight)</option>
-                  <option value="SUPER_ADMIN">Super Admin (Complete System Governance)</option>
+                  <option value="LIBRARIAN">Librarian (Circulation Desk, Catalogue & Member Enrolment)</option>
+                  <option value="SUPER_ADMIN">Super Admin (Complete System Governance & Policies)</option>
                 </select>
               </div>
 
@@ -1807,9 +1762,6 @@ export default function StaffAdministrationPage() {
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white font-medium"
                   >
                     <option value="LIBRARIAN">Librarian</option>
-                    <option value="ACCOUNTS_OPERATOR">Accounts Operator</option>
-                    <option value="APPROVING_OFFICER">Approving Officer</option>
-                    <option value="LIBRARY_ADMIN">Library Admin</option>
                     <option value="SUPER_ADMIN">Super Admin</option>
                   </select>
                 </div>

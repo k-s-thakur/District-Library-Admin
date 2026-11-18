@@ -45,7 +45,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN", "ACCOUNTS_OPERATOR"].includes(session.role)) {
+    if (!session || !["SUPER_ADMIN", "LIBRARIAN"].includes(session.role)) {
       return NextResponse.json(
         { error: "Unauthorized. Staff privileges required to edit payments." },
         { status: 403 }

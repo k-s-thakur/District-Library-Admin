@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
 
     // Privacy protection: Regular member can only see their own active loans
-    const isStaff = ["SUPER_ADMIN", "LIBRARY_ADMIN", "LIBRARIAN", "ACCOUNTS_OPERATOR"].includes(session.role);
+    const isStaff = ["SUPER_ADMIN", "LIBRARIAN"].includes(session.role);
     if (!isStaff) {
       if (session.role !== "MEMBER" || !session.memberId) {
         return NextResponse.json({ error: "Access denied" }, { status: 403 });

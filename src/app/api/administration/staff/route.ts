@@ -35,9 +35,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Super Admin or Library Admin role required to onboard staff." },
+        { error: "Unauthorized. Super Admin role required to onboard staff." },
         { status: 403 }
       );
     }
@@ -87,9 +87,9 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Super Admin or Library Admin role required to update staff." },
+        { error: "Unauthorized. Super Admin role required to update staff." },
         { status: 403 }
       );
     }

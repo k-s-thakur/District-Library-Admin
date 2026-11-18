@@ -10,29 +10,11 @@ const SYSTEM_FALLBACK_STAFF: Record<string, { id: string; name: string; role: Us
     role: "SUPER_ADMIN",
     phone: "+91-9811002233",
   },
-  "admin@library.gov.in": {
-    id: "staff-admin-01",
-    name: "Smt. Sunita Mukherjee",
-    role: "LIBRARY_ADMIN",
-    phone: "+91-9811002234",
-  },
   "librarian@library.gov.in": {
     id: "staff-librarian-01",
     name: "Devendra Patel",
     role: "LIBRARIAN",
     phone: "+91-9811002235",
-  },
-  "accounts@library.gov.in": {
-    id: "staff-accounts-01",
-    name: "Manoj Agarwal",
-    role: "ACCOUNTS_OPERATOR",
-    phone: "+91-9811002236",
-  },
-  "approver@library.gov.in": {
-    id: "staff-approver-01",
-    name: "Rajeshwar Rao",
-    role: "APPROVING_OFFICER",
-    phone: "+91-9811002237",
   },
 };
 

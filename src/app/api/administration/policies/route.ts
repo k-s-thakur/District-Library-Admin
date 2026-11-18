@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const session = await getCurrentUser();
-    if (!session || !["SUPER_ADMIN", "LIBRARY_ADMIN"].includes(session.role)) {
+    if (!session || session.role !== "SUPER_ADMIN") {
       return NextResponse.json(
-        { error: "Unauthorized. Super Admin or Library Admin privileges required to update policies." },
+        { error: "Unauthorized. Super Admin privileges required to update policies." },
         { status: 403 }
       );
     }

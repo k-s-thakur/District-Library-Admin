@@ -28,7 +28,7 @@ async function handleRemindersCron(req: NextRequest) {
   try {
     // Locate system super admin or default staff user for audit association
     const systemUser = await prisma.staffUser.findFirst({
-      where: { role: { in: ["SUPER_ADMIN", "LIBRARY_ADMIN"] } },
+      where: { role: "SUPER_ADMIN" },
       select: { id: true, email: true, name: true },
     });
 
