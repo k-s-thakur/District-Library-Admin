@@ -70,11 +70,13 @@ export default function StaffCataloguePage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // New Book Form State
+  const currentYear = new Date().getFullYear();
   const [newTitle, setNewTitle] = useState("");
   const [newSubtitle, setNewSubtitle] = useState("");
   const [newAuthor, setNewAuthor] = useState("");
   const [newIsbn, setNewIsbn] = useState("");
   const [newCategory, setNewCategory] = useState("Fiction");
+  const [customCategory, setCustomCategory] = useState("");
   const [newDdc, setNewDdc] = useState("823");
   const [newCutter, setNewCutter] = useState("");
   const [newAisle, setNewAisle] = useState("Aisle 3");
@@ -193,6 +195,18 @@ export default function StaffCataloguePage() {
       return;
     }
 
+    const finalCategory = newCategory === "Other" ? customCategory.trim() : newCategory;
+    if (newCategory === "Other" && !finalCategory) {
+      showToast("कृपया कस्टम श्रेणी (Custom Category) का नाम दर्ज करें।");
+      return;
+    }
+
+    const pubYearNum = Number(newPubYear);
+    if (pubYearNum && pubYearNum > currentYear) {
+      showToast(`प्रकाशन वर्ष वर्तमान वर्ष (${currentYear}) से अधिक नहीं हो सकता।`);
+      return;
+    }
+
     submittingRef.current = true;
     setIsSubmitting(true);
 
@@ -213,9 +227,10 @@ export default function StaffCataloguePage() {
           subtitle: newSubtitle.trim() || undefined,
           isbn: newIsbn.trim() || undefined,
           language: newLanguage,
+          categoryName: finalCategory,
           ddcCode: newDdc.trim() || undefined,
           bookNumber: newCutter.trim() || undefined,
-          publicationYear: Number(newPubYear) || new Date().getFullYear(),
+          publicationYear: pubYearNum || currentYear,
           edition: newEdition.trim() || undefined,
           authors: newAuthor ? [newAuthor.trim()] : [],
         }),
@@ -248,9 +263,10 @@ export default function StaffCataloguePage() {
       setNewSubtitle("");
       setNewAuthor("");
       setNewIsbn("");
-      setIsbnValidation({ isValid: false });
-      setNewPubYear(new Date().getFullYear().toString());
+      setNewPubYear(currentYear.toString());
       setNewLanguage("Hindi");
+      setNewCategory("Fiction");
+      setCustomCategory("");
       setNewAisle("Aisle 3");
       setNewRack("Rack B");
       setNewShelf("Shelf 2");
@@ -710,17 +726,34 @@ export default function StaffCataloguePage() {
               {/* Publishing Year & Language */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Publishing Year (प्रकाशन वर्ष)</span>
+                  <label className="block text-slate-700 font-medium mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Publishing Year (प्रकाशन वर्ष)</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      (Max: {currentYear})
+                    </span>
                   </label>
                   <input
                     type="number"
-                    min="1800"
-                    max="2099"
-                    placeholder="2026"
+                    min="1000"
+                    max={currentYear}
+                    placeholder={currentYear.toString()}
                     value={newPubYear}
-                    onChange={(e) => setNewPubYear(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        setNewPubYear("");
+                        return;
+                      }
+                      const num = parseInt(val, 10);
+                      if (num > currentYear) {
+                        setNewPubYear(currentYear.toString());
+                      } else {
+                        setNewPubYear(val);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
@@ -762,7 +795,24 @@ export default function StaffCataloguePage() {
                     <option value="Philosophy">Philosophy (दर्शनशास्त्र)</option>
                     <option value="Literature">Literature (साहित्य)</option>
                     <option value="Reference">Reference (संदर्भ)</option>
+                    <option value="Other">Other (अन्य - नई श्रेणी लिखें)...</option>
                   </select>
+
+                  {newCategory === "Other" && (
+                    <div className="mt-2 space-y-1">
+                      <label className="block text-slate-600 font-medium text-[11px]">
+                        Custom Category Name (कस्टम श्रेणी का नाम) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="उदा. बाल साहित्य, योग, प्रतियोगी परीक्षा, कला..."
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        className="w-full px-3 py-1.5 border border-emerald-500 bg-emerald-50/20 rounded-xl focus:outline-[#0d7a55] text-xs font-medium text-slate-800"
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-slate-700 font-medium mb-1">
@@ -863,7 +913,12 @@ export default function StaffCataloguePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !newTitle.trim() || !newAuthor.trim()}
+                  disabled={
+                    isSubmitting ||
+                    !newTitle.trim() ||
+                    !newAuthor.trim() ||
+                    (newCategory === "Other" && !customCategory.trim())
+                  }
                   className="px-5 py-2 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium shadow-xs transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none cursor-pointer"
                 >
                   {isSubmitting && (

@@ -43,10 +43,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, isbn, subtitle, edition, publicationYear, language, ddcCode, bookNumber, description, coverImageUrl, categoryId, publisherName, authors, isFeatured } = body;
+    const { title, isbn, subtitle, edition, publicationYear, language, ddcCode, bookNumber, description, coverImageUrl, categoryId, categoryName, publisherName, authors, isFeatured } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required." }, { status: 400 });
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (publicationYear && Number(publicationYear) > currentYear) {
+      return NextResponse.json(
+        { error: `प्रकाशन वर्ष वर्तमान वर्ष (${currentYear}) से अधिक नहीं हो सकता। (Publication year cannot exceed ${currentYear})` },
+        { status: 400 }
+      );
     }
 
     // ISBN is optional and has no restrictions.
@@ -61,13 +69,14 @@ export async function POST(req: NextRequest) {
         isbn: finalIsbn,
         subtitle,
         edition,
-        publicationYear,
+        publicationYear: publicationYear ? Number(publicationYear) : undefined,
         language,
         ddcCode,
         bookNumber,
         description,
         coverImageUrl,
         categoryId,
+        categoryName,
         publisherName,
         authors,
         isFeatured,

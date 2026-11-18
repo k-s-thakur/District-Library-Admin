@@ -379,6 +379,7 @@ export interface CreateBookInput {
   description?: string;
   coverImageUrl?: string;
   categoryId?: string;
+  categoryName?: string;
   publisherName?: string;
   authors?: string[]; // author names
   isFeatured?: boolean;
@@ -395,6 +396,7 @@ export interface UpdateBookInput {
   description?: string;
   coverImageUrl?: string;
   categoryId?: string;
+  categoryName?: string;
   publisherName?: string;
   authors?: string[];
   isFeatured?: boolean;
@@ -437,6 +439,33 @@ export async function createBook(input: CreateBookInput, actorId: string) {
       publisherId = pub.id;
     }
 
+    // 2b. Handle category if provided by ID or by name
+    let categoryId: string | null = input.categoryId || null;
+    if (!categoryId && input.categoryName && input.categoryName.trim()) {
+      const catName = input.categoryName.trim();
+      let cat = await tx.category.findFirst({
+        where: {
+          OR: [
+            { name: { equals: catName, mode: "insensitive" } },
+            { code: { equals: catName.toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 30), mode: "insensitive" } },
+          ],
+        },
+      });
+      if (!cat) {
+        const baseCode = catName.toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 24) || "CAT";
+        const uniqueCode = `${baseCode}_${Date.now().toString().slice(-4)}`;
+        cat = await tx.category.create({
+          data: {
+            name: catName,
+            code: uniqueCode,
+            accentColor: "teal",
+            description: `${catName} collection`,
+          },
+        });
+      }
+      categoryId = cat.id;
+    }
+
     // 3. Create book
     const book = await tx.book.create({
       data: {
@@ -450,7 +479,7 @@ export async function createBook(input: CreateBookInput, actorId: string) {
         bookNumber: input.bookNumber?.trim() || null,
         description: input.description?.trim() || null,
         coverImageUrl: input.coverImageUrl?.trim() || null,
-        categoryId: input.categoryId || null,
+        categoryId,
         publisherId,
         isFeatured: input.isFeatured ?? false,
       },
