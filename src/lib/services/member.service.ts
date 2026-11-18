@@ -9,6 +9,7 @@ export interface RegisterMemberInput {
   phone?: string;
   address?: string;
   password?: string;
+  memberNo?: string;
   category: "GENERAL_CITIZEN" | "STUDENT" | "SENIOR_CITIZEN" | "RESEARCHER" | "GOVT_STAFF";
   actorId?: string;
 }
@@ -113,7 +114,18 @@ export async function registerMember(input: RegisterMemberInput) {
       });
     }
 
-    const memberNo = `GPL-${currentYear}-${String(seq.lastNumber).padStart(5, "0")}`;
+    let memberNo: string;
+    if (input.memberNo && input.memberNo.trim()) {
+      const candidateNo = input.memberNo.trim().toUpperCase();
+      const existingNo = await tx.member.findUnique({ where: { memberNo: candidateNo } });
+      if (existingNo) {
+        memberNo = `${candidateNo}-${String(seq.lastNumber).padStart(4, "0")}`;
+      } else {
+        memberNo = candidateNo;
+      }
+    } else {
+      memberNo = `GPL-${currentYear}-${String(seq.lastNumber).padStart(5, "0")}`;
+    }
 
     // 3. Quota by category
     const maxBooksMap: Record<string, number> = {

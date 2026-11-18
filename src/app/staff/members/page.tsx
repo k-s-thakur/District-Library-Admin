@@ -23,6 +23,11 @@ import {
   Ban,
   Check,
   RefreshCw,
+  Sparkles,
+  Copy,
+  Eye,
+  EyeOff,
+  Key,
 } from "lucide-react";
 import { useStaff } from "@/context/StaffContext";
 import QRCodeSVG from "@/components/QRCodeSVG";
@@ -67,7 +72,35 @@ export default function StaffMembersPage() {
   const [newPhone, setNewPhone] = useState("");
   const [newCategory, setNewCategory] = useState<"Adult" | "Student" | "Senior" | "Researcher" | "Govt Staff">("Adult");
   const [newAddress, setNewAddress] = useState("");
+  const [newUserId, setNewUserId] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [registeredCredentials, setRegisteredCredentials] = useState<{
+    fullName: string;
+    memberNo: string;
+    email: string;
+    password?: string;
+    category: string;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const generateStudentCredentials = useCallback(() => {
+    const year = new Date().getFullYear();
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const generatedId = `STU-${year}-${randomSuffix}`;
+    const num = Math.floor(100 + Math.random() * 900);
+    const spec = ["@", "#", "$", "!"][Math.floor(Math.random() * 4)];
+    const generatedPass = `Stu@${year}${spec}${num}`;
+
+    setNewUserId(generatedId);
+    setNewPassword(generatedPass);
+  }, []);
+
+  useEffect(() => {
+    if (newCategory === "Student" && !newUserId) {
+      generateStudentCredentials();
+    }
+  }, [newCategory, newUserId, generateStudentCredentials]);
 
   const filterRef = useRef<HTMLDivElement>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
@@ -204,6 +237,12 @@ export default function StaffMembersPage() {
 
   const handleRegisterMember = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (newPhone.trim() && newPhone.trim().length !== 10) {
+      showToast("कृपया 10 अंकों का मान्य मोबाइल नंबर दर्ज करें (Must be 10 digits)", true);
+      return;
+    }
+
     setSubmitting(true);
 
     const categoryEnumMap: Record<string, string> = {
@@ -213,6 +252,9 @@ export default function StaffMembersPage() {
       Researcher: "RESEARCHER",
       "Govt Staff": "GOVT_STAFF",
     };
+
+    const finalPassword = newPassword.trim() || (newCategory === "Student" ? `Stu@${new Date().getFullYear()}#123` : "Member@123");
+    const finalUserId = newUserId.trim() || undefined;
 
     try {
       const res = await fetch("/api/members", {
@@ -224,6 +266,8 @@ export default function StaffMembersPage() {
           phone: newPhone.trim() || undefined,
           address: newAddress.trim() || undefined,
           category: categoryEnumMap[newCategory] || "GENERAL_CITIZEN",
+          password: finalPassword,
+          memberNo: finalUserId,
         }),
       });
 
@@ -234,10 +278,23 @@ export default function StaffMembersPage() {
 
       showToast(`Registered member ${data.member.fullName} (${data.member.memberNo}) successfully.`);
       setRegisterModalOpen(false);
+
+      if (newCategory === "Student") {
+        setRegisteredCredentials({
+          fullName: data.member.fullName,
+          memberNo: data.member.memberNo,
+          email: data.member.email,
+          password: finalPassword,
+          category: "Student",
+        });
+      }
+
       setNewName("");
       setNewEmail("");
       setNewPhone("");
       setNewAddress("");
+      setNewUserId("");
+      setNewPassword("");
       loadMembers();
     } catch (err: any) {
       showToast(err.message || "Registration failed", true);
@@ -713,14 +770,24 @@ export default function StaffMembersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-medium mb-1">
-                    Phone / Mobile
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-700 font-medium">
+                      Phone / Mobile
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {newPhone ? `${newPhone.length}/10` : "10 Digits"}
+                    </span>
+                  </div>
                   <input
                     type="tel"
-                    placeholder="+91 98110..."
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="उदा. 9876543210 (10 अंक)"
                     value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value)}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setNewPhone(digits);
+                    }}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55]"
                   />
                 </div>
@@ -732,7 +799,13 @@ export default function StaffMembersPage() {
                 </label>
                 <select
                   value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value as any)}
+                  onChange={(e) => {
+                    const cat = e.target.value as any;
+                    setNewCategory(cat);
+                    if (cat === "Student") {
+                      generateStudentCredentials();
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:outline-[#0d7a55] bg-white"
                 >
                   <option value="Adult">Adult Citizen</option>
@@ -742,6 +815,81 @@ export default function StaffMembersPage() {
                   <option value="Govt Staff">Government Staff</option>
                 </select>
               </div>
+
+              {/* AUTO-GENERATED CREDENTIALS FOR STUDENTS */}
+              {newCategory === "Student" && (
+                <div className="p-3 bg-emerald-50/70 border border-emerald-300 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-emerald-900 font-semibold text-xs">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Auto-Generated Student Credentials (छात्र लॉगिन विवरण)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={generateStudentCredentials}
+                      className="text-[11px] text-emerald-800 hover:text-emerald-950 font-medium flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-emerald-200 shadow-xs cursor-pointer hover:bg-emerald-50 transition"
+                      title="नया आईडी व पासवर्ड जनरेट करें"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Regenerate</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] text-slate-600 font-medium mb-1">
+                        Student User ID
+                      </label>
+                      <input
+                        type="text"
+                        value={newUserId}
+                        onChange={(e) => setNewUserId(e.target.value.toUpperCase())}
+                        placeholder="STU-2026-XXXX"
+                        className="w-full px-2.5 py-1.5 font-mono text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded-lg focus:outline-[#0d7a55]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-slate-600 font-medium mb-1">
+                        Student Password
+                      </label>
+                      <div className="relative flex items-center">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Password"
+                          className="w-full px-2.5 py-1.5 font-mono text-xs font-bold text-emerald-950 bg-white border border-emerald-300 rounded-lg focus:outline-[#0d7a55] pr-14"
+                        />
+                        <div className="absolute right-1 flex items-center gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+                            title={showPassword ? "Hide" : "Show"}
+                          >
+                            {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`User ID: ${newUserId}\nPassword: ${newPassword}`);
+                              showToast("छात्र क्रेडेंशियल्स कॉपी हो गए!");
+                            }}
+                            className="p-1 text-slate-400 hover:text-emerald-700 cursor-pointer"
+                            title="Copy credentials"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-emerald-800 leading-tight">
+                    💡 छात्र इस यूज़र आईडी और पासवर्ड का उपयोग करके पोर्टल पर लॉगिन कर सकेंगे।
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-slate-700 font-medium mb-1">
@@ -773,6 +921,69 @@ export default function StaffMembersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* STUDENT CREDENTIALS SUCCESS POPUP */}
+      {registeredCredentials && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-emerald-300 max-w-sm w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-[#0d7a55] flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-6 h-6 text-[#0d7a55]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Student Account Created!
+                </h3>
+                <p className="text-xs text-slate-500">
+                  लॉगिन विवरण सफलतापूर्वक जनरेट हो गए हैं
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-2.5 font-mono text-xs">
+              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
+                <span className="text-slate-500 font-sans">Full Name:</span>
+                <span className="font-bold text-slate-900 font-sans">{registeredCredentials.fullName}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-emerald-200/60 pb-1.5">
+                <span className="text-slate-500 font-sans">User ID / Member No:</span>
+                <span className="font-bold text-[#0d7a55] text-sm">{registeredCredentials.memberNo}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-sans">Password:</span>
+                <span className="font-bold text-[#0d7a55] text-sm">{registeredCredentials.password}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `🏛️ District Public Library - Student Portal Login\n` +
+                    `Student Name: ${registeredCredentials.fullName}\n` +
+                    `User ID / Member No: ${registeredCredentials.memberNo}\n` +
+                    `Password: ${registeredCredentials.password}\n` +
+                    `Login URL: ${window.location.origin}/login`
+                  );
+                  showToast("छात्र क्रेडेंशियल्स क्लिपबोर्ड पर कॉपी हो गए!");
+                }}
+                className="flex-1 py-2 px-3 rounded-xl bg-[#0d7a55] hover:bg-[#0a6344] text-white font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy Credentials</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRegisteredCredentials(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-medium cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

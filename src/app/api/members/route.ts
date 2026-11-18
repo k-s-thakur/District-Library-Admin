@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { fullName, email, phone, address, category, password } = body;
+    const { fullName, email, phone, address, category, password, memberNo } = body;
 
     if (!fullName || !email) {
       return NextResponse.json({ error: "fullName and email are required" }, { status: 400 });
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
       address,
       category: category || "GENERAL_CITIZEN",
       password,
+      memberNo,
       actorId: session.id,
     });
 
