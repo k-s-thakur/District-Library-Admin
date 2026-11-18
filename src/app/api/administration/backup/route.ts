@@ -16,53 +16,51 @@ export async function GET(req: NextRequest) {
 
     const exportTimestamp = new Date().toISOString();
 
-    const [
-      staff,
-      members,
-      policies,
-      books,
-      loans,
-      feeCharges,
-      payments,
-      recentAuditLogs,
-    ] = await Promise.all([
-      prisma.staffUser.findMany({
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          status: true,
-          phone: true,
-          createdAt: true,
-        },
-      }),
-      prisma.member.findMany({
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.libraryPolicy.findMany(),
-      prisma.book.findMany({
-        include: {
-          copies: true,
-          authors: { include: { author: true } },
-          category: true,
-          publisher: true,
-        },
-      }),
-      prisma.loan.findMany({
-        orderBy: { issuedAt: "desc" },
-      }),
-      prisma.feeCharge.findMany({
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.payment.findMany({
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.auditLog.findMany({
-        take: 1000,
-        orderBy: { timestamp: "desc" },
-      }),
-    ]);
+    // Query tables sequentially rather than Promise.all to avoid exhausting
+    // the Supabase connection pooler (PgBouncer) connection slots.
+    const staff = await prisma.staffUser.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        phone: true,
+        createdAt: true,
+      },
+    });
+
+    const members = await prisma.member.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    const policies = await prisma.libraryPolicy.findMany();
+
+    const books = await prisma.book.findMany({
+      include: {
+        copies: true,
+        authors: { include: { author: true } },
+        category: true,
+        publisher: true,
+      },
+    });
+
+    const loans = await prisma.loan.findMany({
+      orderBy: { issuedAt: "desc" },
+    });
+
+    const feeCharges = await prisma.feeCharge.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    const payments = await prisma.payment.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+
+    const recentAuditLogs = await prisma.auditLog.findMany({
+      take: 200,
+      orderBy: { timestamp: "desc" },
+    });
 
     // Record audit event
     await prisma.auditLog.create({
