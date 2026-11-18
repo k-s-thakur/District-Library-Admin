@@ -554,8 +554,34 @@ export default function StaffAdministrationPage() {
         </div>
       )}
 
-      {/* TOP HEADER & NAVIGATION */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* OFFICIAL PRINT-ONLY DOCUMENT HEADER */}
+      <div className="hidden print:block mb-6 border-b-2 border-slate-900 pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+              GOVERNMENT OF CHHATTISGARH · PUBLIC LIBRARIES DIRECTORATE
+            </div>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
+              DISTRICT CENTRAL PUBLIC LIBRARY
+            </h1>
+            <p className="text-xs font-bold text-teal-800 mt-1 uppercase tracking-wide">
+              {activeTab === "staff"
+                ? "OFFICIAL STAFF DIRECTORY & JURISDICTION REGISTER"
+                : activeTab === "roles"
+                ? "ROLES & ACCESS CONTROL MATRIX REPORT"
+                : "CIRCULATION POLICIES & AUDIT REPORT"}
+            </p>
+          </div>
+          <div className="text-right text-xs text-slate-600 font-mono space-y-0.5">
+            <div>Report Date: {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+            <div>Generated: {new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</div>
+            <div className="font-bold text-slate-900">Total Officers: {staffList.length} Active</div>
+          </div>
+        </div>
+      </div>
+
+      {/* TOP HEADER & NAVIGATION (Screen Only) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-teal-700 uppercase tracking-wider mb-0.5">
             <span className="font-bold">
@@ -652,8 +678,8 @@ export default function StaffAdministrationPage() {
       {/* ========================================================================= */}
       {activeTab === "staff" && (
         <div className="space-y-5">
-          {/* TOP 3 METRIC KPI CARDS (Matching Image 3 Style) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* TOP 3 METRIC KPI CARDS (Matching Image 3 Style - Screen Only) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 print:hidden">
             {/* Card 1: Active Officers */}
             <div className="bg-white border-2 border-blue-500 rounded-2xl p-4 shadow-xs flex items-center gap-4 relative overflow-hidden">
               <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -714,8 +740,8 @@ export default function StaffAdministrationPage() {
             </div>
           </div>
 
-          {/* ACTION BUTTONS & SEARCH FILTER BAR (Matching Image 3) */}
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 space-y-4">
+          {/* ACTION BUTTONS & SEARCH FILTER BAR (Matching Image 3 - Screen Only) */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 space-y-4 print:hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               {/* Left Search Bar */}
               <div className="relative flex-1 max-w-md">
@@ -851,48 +877,54 @@ export default function StaffAdministrationPage() {
 
           {/* STAFF TABLE VIEW (Inspired directly by Image 3) */}
           {staffViewMode === "table" ? (
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#f8faf9] border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden print:border-none print:shadow-none print:overflow-visible">
+              <div className="overflow-x-auto print:overflow-visible">
+                <table className="w-full text-left text-xs print:text-[11px]">
+                  <thead className="bg-[#f8faf9] print:bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
                     <tr>
+                      <th className="py-3 px-3 w-8 text-center hidden print:table-cell">#</th>
                       <th className="py-3 px-4">OFFICER & DESIGNATION</th>
                       <th className="py-3 px-4">DEPARTMENT & JURISDICTION</th>
                       <th className="py-3 px-4">OFFICIAL CREDENTIALS</th>
                       <th className="py-3 px-4">STATUS</th>
-                      <th className="py-3 px-4">INSPECTIONS / DUTY</th>
-                      <th className="py-3 px-4 text-right">ACTIONS</th>
+                      <th className="py-3 px-4">DUTY / ACCESS</th>
+                      <th className="py-3 px-4 text-right print:hidden">ACTIONS</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                     {filteredStaff.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-slate-400">
+                        <td colSpan={7} className="py-12 text-center text-slate-400">
                           {loadingStaff ? "Loading staff directory..." : "No staff accounts found matching filters."}
                         </td>
                       </tr>
                     ) : (
-                      filteredStaff.map((staff) => {
+                      filteredStaff.map((staff, idx) => {
                         const dept = getDepartmentForRole(staff.role);
                         const roleObj = LIBRARY_ROLES.find((r) => r.code === staff.role);
 
                         return (
                           <tr key={staff.id} className="hover:bg-slate-50/80 transition group">
+                            {/* Row # for Print */}
+                            <td className="py-3.5 px-3 text-center text-slate-500 font-mono hidden print:table-cell">
+                              {idx + 1}
+                            </td>
+
                             {/* Officer & Designation */}
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center shrink-0 text-xs shadow-xs">
+                                <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center shrink-0 text-xs shadow-xs print:hidden">
                                   {staff.name.slice(0, 2).toUpperCase()}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-slate-900 text-xs">{staff.name}</span>
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                                    <span className="font-bold text-slate-900 text-xs print:text-sm">{staff.name}</span>
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 print:hidden" />
                                   </div>
                                   <div className="text-[11px] text-slate-500 flex items-center gap-1">
                                     <span>{roleObj?.name || staff.role}</span>
                                   </div>
-                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 print:text-slate-600">
                                     📞 {staff.phone || "No phone"} • ✉️ {staff.email}
                                   </div>
                                 </div>
@@ -902,11 +934,11 @@ export default function StaffAdministrationPage() {
                             {/* Department & Jurisdiction */}
                             <td className="py-3.5 px-4">
                               <div className="space-y-1">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
-                                  <Building2 className="w-3 h-3 text-slate-500" />
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-800 border border-slate-200 print:border-none print:p-0">
+                                  <Building2 className="w-3 h-3 text-slate-500 print:hidden" />
                                   <span>{dept.wing}</span>
                                 </span>
-                                <div className="text-[11px] text-slate-500">
+                                <div className="text-[11px] text-slate-500 print:text-slate-700">
                                   📍 {dept.jurisdiction}
                                 </div>
                               </div>
@@ -914,24 +946,24 @@ export default function StaffAdministrationPage() {
 
                             {/* Official Credentials Box (Exact style of Image 3) */}
                             <td className="py-3.5 px-4">
-                              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 w-60">
-                                <div className="flex items-center justify-between text-[10px] font-mono">
+                              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 w-60 print:w-auto print:bg-transparent print:border-none print:p-0">
+                                <div className="flex items-center justify-between text-[10px] font-mono print:text-xs">
                                   <span className="text-slate-500">ID:</span>
-                                  <span className="font-bold text-slate-800 truncate max-w-[170px]" title={staff.email}>
+                                  <span className="font-bold text-slate-800 truncate max-w-[170px] print:max-w-none" title={staff.email}>
                                     {staff.email}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between text-[10px] font-mono">
+                                <div className="flex items-center justify-between text-[10px] font-mono print:text-xs">
                                   <span className="text-slate-500">Password:</span>
                                   <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                                    <Check className="w-3 h-3 text-emerald-600" />
+                                    <Check className="w-3 h-3 text-emerald-600 print:hidden" />
                                     <span>Default set</span>
                                   </span>
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => copyCredentials(staff.email, "Admin@123", staff.name)}
-                                  className="w-full mt-1 py-1 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs"
+                                  className="w-full mt-1 py-1 px-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-semibold text-slate-700 flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs print:hidden"
                                 >
                                   <Copy className="w-3 h-3 text-slate-500" />
                                   <span>Copy Credentials</span>
@@ -941,7 +973,7 @@ export default function StaffAdministrationPage() {
 
                             {/* Status */}
                             <td className="py-3.5 px-4">
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 print:border-none print:p-0">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                                 <span>Active</span>
                               </span>
@@ -949,13 +981,13 @@ export default function StaffAdministrationPage() {
 
                             {/* Duty / Scope */}
                             <td className="py-3.5 px-4">
-                              <span className="text-[11px] font-medium text-slate-600">
+                              <span className="text-[11px] font-medium text-slate-600 print:text-slate-800">
                                 {roleObj?.accessLevel || "Standard Access"}
                               </span>
                             </td>
 
                             {/* Staff Actions */}
-                            <td className="py-3.5 px-4 text-right space-x-1">
+                            <td className="py-3.5 px-4 text-right space-x-1 print:hidden">
                               <button
                                 onClick={() => setViewingStaff(staff)}
                                 className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition cursor-pointer"
@@ -998,14 +1030,14 @@ export default function StaffAdministrationPage() {
                   </tbody>
                 </table>
               </div>
-              <div className="py-3 px-4 bg-slate-50/70 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+              <div className="py-3 px-4 bg-slate-50/70 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between print:hidden">
                 <span>Showing {filteredStaff.length} of {staffList.length} officers</span>
                 <span className="text-[11px] text-slate-400">© 2026 District Public Library · State Informatics Framework</span>
               </div>
             </div>
           ) : (
             /* CARDS VIEW */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:hidden">
               {filteredStaff.map((staff) => {
                 const dept = getDepartmentForRole(staff.role);
                 const roleObj = LIBRARY_ROLES.find((r) => r.code === staff.role);
@@ -1075,6 +1107,24 @@ export default function StaffAdministrationPage() {
               })}
             </div>
           )}
+
+          {/* OFFICIAL PRINT-ONLY VERIFICATION FOOTER */}
+          <div className="hidden print:block mt-8 pt-4 border-t border-slate-300 text-xs text-slate-600">
+            <div className="flex justify-between items-end pt-8">
+              <div className="space-y-1">
+                <p className="text-[10px] text-slate-400 font-mono">
+                  Official Registry Document · District Public Library Management System
+                </p>
+                <p className="font-semibold text-slate-700">
+                  Certified True Copy: Administration & Records Section
+                </p>
+              </div>
+              <div className="text-center w-64 border-t border-slate-800 pt-1.5">
+                <p className="font-bold text-slate-900 text-xs">District Library Officer</p>
+                <p className="text-[10px] text-slate-500">Authorized Signatory & Stamp</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1083,8 +1133,8 @@ export default function StaffAdministrationPage() {
       {/* ========================================================================= */}
       {activeTab === "roles" && (
         <div className="space-y-5">
-          {/* TOP 3 METRIC KPI CARDS (Matching Image 2 Style) */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* TOP 3 METRIC KPI CARDS (Matching Image 2 Style - Screen Only) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 print:hidden">
             {/* Card 1: Configured Roles */}
             <div className="bg-white border-2 border-blue-500 rounded-2xl p-4 shadow-xs flex items-center gap-4 relative overflow-hidden">
               <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -1145,8 +1195,8 @@ export default function StaffAdministrationPage() {
             </div>
           </div>
 
-          {/* SEARCH & FILTERS FOR ROLES (Matching Image 2) */}
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 space-y-4">
+          {/* SEARCH & FILTERS FOR ROLES (Matching Image 2 - Screen Only) */}
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs p-4 space-y-4 print:hidden">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="relative flex-1 max-w-md">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1188,6 +1238,14 @@ export default function StaffAdministrationPage() {
                   <Download className="w-3.5 h-3.5 text-slate-500" />
                   <span>Export CSV</span>
                 </button>
+                <button
+                  onClick={() => window.print()}
+                  className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                  title="Print Roles Report"
+                >
+                  <Printer className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Print Report</span>
+                </button>
               </div>
             </div>
 
@@ -1221,20 +1279,20 @@ export default function StaffAdministrationPage() {
           </div>
 
           {/* ROLES MATRIX TABLE (Exact match to Image 2) */}
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#f8faf9] border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden print:border-none print:shadow-none print:overflow-visible">
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-left text-xs print:text-[11px]">
+                <thead className="bg-[#f8faf9] print:bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="py-3 px-4">Role & Inspection Code ↑</th>
                     <th className="py-3 px-4">Department & Wing ↑↓</th>
                     <th className="py-3 px-4">Access Level ↑↓</th>
                     <th className="py-3 px-4">Assigned Officers ↑↓</th>
                     <th className="py-3 px-4">Status ↑↓</th>
-                    <th className="py-3 px-4 text-right">ACTIONS</th>
+                    <th className="py-3 px-4 text-right print:hidden">ACTIONS</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 print:divide-slate-200">
                   {filteredRoles.map((role) => {
                     const assignedOfficers = staffList.filter((s) => s.role === role.code);
 
@@ -1242,11 +1300,11 @@ export default function StaffAdministrationPage() {
                       <tr key={role.code} className="hover:bg-slate-50/80 transition">
                         <td className="py-3.5 px-4">
                           <div className="space-y-0.5">
-                            <div className="font-bold text-slate-900 text-xs">{role.name}</div>
-                            <span className="inline-block font-mono text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-bold border border-blue-200">
+                            <div className="font-bold text-slate-900 text-xs print:text-sm">{role.name}</div>
+                            <span className="inline-block font-mono text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-bold border border-blue-200 print:border-none print:p-0">
                               {role.code}
                             </span>
-                            <p className="text-[11px] text-slate-500 max-w-sm mt-0.5 leading-tight">
+                            <p className="text-[11px] text-slate-500 max-w-sm mt-0.5 leading-tight print:text-slate-700">
                               {role.description}
                             </p>
                           </div>
@@ -1254,14 +1312,14 @@ export default function StaffAdministrationPage() {
 
                         <td className="py-3.5 px-4">
                           <div className="text-slate-800 font-medium">{role.department}</div>
-                          <div className="text-[10px] text-slate-400 mt-0.5 font-mono">
+                          <div className="text-[10px] text-slate-400 mt-0.5 font-mono print:text-slate-600">
                             Updated: {role.updatedDate}
                           </div>
                         </td>
 
                         <td className="py-3.5 px-4">
                           <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border print:border-none print:p-0 ${
                               role.accessLevel === "Full Control"
                                 ? "bg-purple-50 text-purple-700 border-purple-200"
                                 : role.accessLevel === "Circulation Desk"
@@ -1274,21 +1332,20 @@ export default function StaffAdministrationPage() {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold font-mono">
-                            <Users className="w-3 h-3 text-slate-500" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold font-mono print:bg-transparent print:border-none print:p-0">
+                            <Users className="w-3 h-3 text-slate-500 print:hidden" />
                             <span>{assignedOfficers.length} Officers</span>
                           </span>
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <label className="inline-flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" checked={role.status === "Active"} readOnly className="sr-only peer" />
-                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 relative"></div>
-                            <span className="text-xs font-semibold text-emerald-800">Active</span>
-                          </label>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 print:border-none print:p-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                            <span>Active</span>
+                          </span>
                         </td>
 
-                        <td className="py-3.5 px-4 text-right space-x-1">
+                        <td className="py-3.5 px-4 text-right space-x-1 print:hidden">
                           <button
                             type="button"
                             onClick={() => {
@@ -1315,9 +1372,27 @@ export default function StaffAdministrationPage() {
                 </tbody>
               </table>
             </div>
-            <div className="py-3 px-4 bg-slate-50/70 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+            <div className="py-3 px-4 bg-slate-50/70 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between print:hidden">
               <span>Showing {filteredRoles.length} of {LIBRARY_ROLES.length} roles</span>
               <span className="text-[11px] text-slate-400">Governance & Role Delegation Framework © 2026</span>
+            </div>
+          </div>
+
+          {/* OFFICIAL PRINT-ONLY VERIFICATION FOOTER FOR ROLES */}
+          <div className="hidden print:block mt-8 pt-4 border-t border-slate-300 text-xs text-slate-600">
+            <div className="flex justify-between items-end pt-8">
+              <div className="space-y-1">
+                <p className="text-[10px] text-slate-400 font-mono">
+                  Official Registry Document · District Public Library Management System
+                </p>
+                <p className="font-semibold text-slate-700">
+                  Certified True Copy: Governance & Roles Framework
+                </p>
+              </div>
+              <div className="text-center w-64 border-t border-slate-800 pt-1.5">
+                <p className="font-bold text-slate-900 text-xs">District Library Officer</p>
+                <p className="text-[10px] text-slate-500">Authorized Signatory & Stamp</p>
+              </div>
             </div>
           </div>
         </div>
