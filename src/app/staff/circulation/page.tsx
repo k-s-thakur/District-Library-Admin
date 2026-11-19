@@ -107,14 +107,29 @@ export default function StaffCirculationPage() {
   const handleScanLookup = async (code: string) => {
     if (!code.trim()) return;
     setIsLookingUpScan(true);
+
+    const raw = code.trim();
+    // 1. Check if it's a member card QR / ID (e.g. MEMBER-GPL-2026-0185 or GPL-2026-0185)
+    const memberCode = raw.replace(/^MEMBER-/i, "");
+    if (/^(GPL|STU|MBR)-/i.test(memberCode)) {
+      setScanModalOpen(false);
+      setScanCode("");
+      setIssueMember(memberCode.toUpperCase());
+      setIssueModalOpen(true);
+      showToast(`Member ID detected: "${memberCode.toUpperCase()}". Ready to issue books.`);
+      setIsLookingUpScan(false);
+      return;
+    }
+
     try {
-      const res = await fetch(`/api/catalog/copies?search=${encodeURIComponent(code.trim())}&limit=5`);
+      const res = await fetch(`/api/catalog/copies?search=${encodeURIComponent(raw)}&limit=5`);
       if (res.ok) {
         const data = await res.json();
         const match = data.items?.find(
           (c: any) =>
-            c.accessionNo.toLowerCase() === code.trim().toLowerCase() ||
-            c.qrToken?.toLowerCase() === code.trim().toLowerCase()
+            c.accessionNo.toLowerCase() === raw.toLowerCase() ||
+            c.qrCodeToken?.toLowerCase() === raw.toLowerCase() ||
+            c.qrToken?.toLowerCase() === raw.toLowerCase()
         ) || data.items?.[0];
 
         if (match) {
@@ -134,9 +149,27 @@ export default function StaffCirculationPage() {
           return;
         }
       }
-      showToast(`No catalog copy record found matching: ${code}`);
+
+      // If accession format like ACC-..., route to issue modal gracefully
+      if (/^ACC-/i.test(raw)) {
+        setScanModalOpen(false);
+        setScanCode("");
+        setIssueBookAcc(raw.toUpperCase());
+        setIssueModalOpen(true);
+        showToast(`Accession "${raw.toUpperCase()}" loaded for circulation.`);
+        return;
+      }
+
+      showToast(`No catalog copy record found matching: ${raw}`);
     } catch (err: any) {
-      showToast(`Lookup error: ${err.message}`);
+      if (/^ACC-/i.test(raw)) {
+        setScanModalOpen(false);
+        setIssueBookAcc(raw.toUpperCase());
+        setIssueModalOpen(true);
+        showToast(`Accession "${raw.toUpperCase()}" loaded.`);
+      } else {
+        showToast(`Lookup error: ${err.message}`);
+      }
     } finally {
       setIsLookingUpScan(false);
     }

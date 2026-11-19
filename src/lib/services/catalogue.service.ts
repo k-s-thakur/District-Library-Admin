@@ -784,6 +784,7 @@ export async function listAccessionRegister(params?: {
     const s = params.search.trim();
     where.OR = [
       { accessionNo: { contains: s } },
+      { qrCodeToken: { contains: s } },
       { shelfLocation: { contains: s } },
       { book: { title: { contains: s } } },
       { book: { isbn: { contains: s } } },
