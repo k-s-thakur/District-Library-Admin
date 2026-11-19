@@ -43,56 +43,68 @@ export default function StaffOverviewPage() {
   const [activityFilter, setActivityFilter] = useState("Today");
 
   const [metrics, setMetrics] = useState<OverviewMetrics>({
-    catalogueTitles: 8426,
-    totalCopies: 12680,
-    activeMembers: 3218,
-    booksOnLoan: 1084,
-    overdueLoans: 42,
-    collectionsToday: 2840,
-    todayTransactionsCount: 146,
+    catalogueTitles: 0,
+    totalCopies: 0,
+    activeMembers: 0,
+    booksOnLoan: 0,
+    overdueLoans: 0,
+    collectionsToday: 0,
+    todayTransactionsCount: 0,
   });
 
-  const [activities, setActivities] = useState<ActivityItem[]>([
-    {
-      id: "act-1",
-      type: "return",
-      title: "Book Returned",
-      detail: "The White Tiger · ACC-2024-0012",
-      member: "MBR-2023-3904 (Sunita Rao)",
-      time: "09:42 AM",
-    },
-    {
-      id: "act-2",
-      type: "issue",
-      title: "Book Issued",
-      detail: "Wings of Fire · ACC-2024-0043",
-      member: "MBR-2024-0188 (Priya Vance)",
-      time: "09:12 AM",
-    },
-    {
-      id: "act-3",
-      type: "member",
-      title: "New Member Registered",
-      detail: "Student Category · Quota: 4",
-      member: "MBR-2026-00012 (Aditya Roy)",
-      time: "08:58 AM",
-    },
-  ]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   useEffect(() => {
-    if (!previewData) {
-      fetch("/api/administration/overview")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.metrics) {
-            setMetrics(data.metrics);
-          }
-          if (data.recentActivities && data.recentActivities.length > 0) {
-            setActivities(data.recentActivities);
-          }
-        })
-        .catch(() => {});
+    if (previewData) {
+      setMetrics({
+        catalogueTitles: 8426,
+        totalCopies: 12680,
+        activeMembers: 3218,
+        booksOnLoan: 1084,
+        overdueLoans: 42,
+        collectionsToday: 2840,
+        todayTransactionsCount: 146,
+      });
+      setActivities([
+        {
+          id: "act-1",
+          type: "return",
+          title: "Book Returned",
+          detail: "The White Tiger · ACC-2024-0012",
+          member: "MBR-2023-3904 (Sunita Rao)",
+          time: "09:42 AM",
+        },
+        {
+          id: "act-2",
+          type: "issue",
+          title: "Book Issued",
+          detail: "Wings of Fire · ACC-2024-0043",
+          member: "MBR-2024-0188 (Priya Vance)",
+          time: "09:12 AM",
+        },
+        {
+          id: "act-3",
+          type: "member",
+          title: "New Member Registered",
+          detail: "Student Category · Quota: 4",
+          member: "MBR-2026-00012 (Aditya Roy)",
+          time: "08:58 AM",
+        },
+      ]);
+      return;
     }
+
+    fetch("/api/administration/overview")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.metrics) {
+          setMetrics(data.metrics);
+        }
+        if (data.recentActivities && data.recentActivities.length > 0) {
+          setActivities(data.recentActivities);
+        }
+      })
+      .catch(() => {});
   }, [previewData]);
 
   // Clean Chart Data Points
@@ -357,11 +369,21 @@ export default function StaffOverviewPage() {
             </div>
 
             {/* Segmented Progress Bar */}
-            <div className="w-full h-2.5 rounded-full bg-slate-100 flex overflow-hidden mt-4">
-              <div style={{ width: "65%" }} className="bg-[#0d7a55]" title="Available" />
-              <div style={{ width: "25%" }} className="bg-blue-600" title="Issued" />
-              <div style={{ width: "10%" }} className="bg-amber-500" title="Reserved/Other" />
-            </div>
+            {(() => {
+              const available = Math.max(0, metrics.totalCopies - metrics.booksOnLoan);
+              const total = metrics.totalCopies || 1;
+              const availPct = Math.min(100, Math.round((available / total) * 100));
+              const loanPct = Math.min(100 - availPct, Math.round((metrics.booksOnLoan / total) * 100));
+              const otherPct = Math.max(0, 100 - availPct - loanPct);
+
+              return (
+                <div className="w-full h-2.5 rounded-full bg-slate-100 flex overflow-hidden mt-4">
+                  <div style={{ width: `${availPct}%` }} className="bg-[#0d7a55]" title={`Available: ${available} (${availPct}%)`} />
+                  <div style={{ width: `${loanPct}%` }} className="bg-blue-600" title={`On Loan: ${metrics.booksOnLoan} (${loanPct}%)`} />
+                  <div style={{ width: `${otherPct}%` }} className="bg-rose-500" title={`Overdue: ${metrics.overdueLoans} (${otherPct}%)`} />
+                </div>
+              );
+            })()}
 
             {/* Breakdown List */}
             <div className="mt-5 space-y-2 text-xs">
@@ -430,34 +452,40 @@ export default function StaffOverviewPage() {
           </div>
 
           <div className="divide-y divide-slate-100 mt-2">
-            {activities.map((act) => {
-              const IconComponent =
-                act.type === "return" ? RotateCcw : act.type === "issue" ? BookOpen : UserPlus;
-              const badgeBg =
-                act.type === "return"
-                  ? "bg-[#e2f6ee] text-[#0d7a55]"
-                  : act.type === "issue"
-                  ? "bg-blue-50 text-blue-700"
-                  : "bg-emerald-50 text-emerald-700";
+            {activities.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                No recent transactions or activity recorded yet.
+              </div>
+            ) : (
+              activities.map((act) => {
+                const IconComponent =
+                  act.type === "return" ? RotateCcw : act.type === "issue" ? BookOpen : UserPlus;
+                const badgeBg =
+                  act.type === "return"
+                    ? "bg-[#e2f6ee] text-[#0d7a55]"
+                    : act.type === "issue"
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-emerald-50 text-emerald-700";
 
-              return (
-                <div key={act.id} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/60 rounded-xl px-2 transition">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${badgeBg}`}>
-                      <IconComponent className="w-4 h-4" />
+                return (
+                  <div key={act.id} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/60 rounded-xl px-2 transition">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${badgeBg}`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900">{act.title}</div>
+                        <div className="text-slate-500 text-[11px]">{act.detail}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-slate-900">{act.title}</div>
-                      <div className="text-slate-500 text-[11px]">{act.detail}</div>
+                    <div className="text-right">
+                      <div className="text-slate-700 font-medium text-[11px]">{act.member}</div>
+                      <div className="text-slate-400 text-[10px]">{act.time}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-slate-700 font-medium text-[11px]">{act.member}</div>
-                    <div className="text-slate-400 text-[10px]">{act.time}</div>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
